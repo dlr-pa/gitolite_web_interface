@@ -166,7 +166,7 @@ def gitolite_web_interface(
                 content += '</pre>'
                 content += '<h2>Next Step:</h2>'
                 content += '<p>Now you have to verify your ssh key (by ssh). '
-                content += 'You cannot continue with the webinterface.</p>'
+                content += 'You cannot continue with the web interface.</p>'
                 content += '<p>Example:<pre>'
                 content += 'ssh -i .ssh/newkey ' + ssh_gitolite_user + '@' + \
                     ssh_host + ' sskm confirm-add ' + form["name"].value
