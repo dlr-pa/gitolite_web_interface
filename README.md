@@ -16,3 +16,13 @@ But until now there is no possibility to manage ssh keys over http.
 Therefore this script *gitolite_web_interface.py* should give the possibility
 to add ssh keys over http. After this sskm over ssh can be used to further
 manage the keys.
+
+## copyright + license
+
+Author: Daniel Mohr.
+
+Date: 2021-05-11 (last change).
+
+License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991
+
+Copyright (C) 2021 Daniel Mohr
