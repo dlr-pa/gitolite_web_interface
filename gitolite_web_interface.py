@@ -2,7 +2,7 @@
 """
 Author: Daniel Mohr.
 Date: 2021-05-10 (last change).
-License: GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007.
+License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 """
 
 import cgi
