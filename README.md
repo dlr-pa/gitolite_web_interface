@@ -37,13 +37,13 @@ at the last if clause (at the end of the file):
 Now you can integrate calling it in apache, e. g. add the following lines
 to your apache configuration:
 
-		ScriptAlias /www/ /var/www/bin/gitolite_web_interface.py
-	    <Location /www>
-	        AuthType Basic
-	    	AuthName "gitolite access is required"
-	    	Require valid-user
-	    	AuthUserFile /etc/apache2/gitolite.passwd
-	    </Location>
+        ScriptAlias /www/ /var/www/bin/gitolite_web_interface.py
+        <Location /www>
+            AuthType Basic
+            AuthName "gitolite access is required"
+            Require valid-user
+            AuthUserFile /etc/apache2/gitolite.passwd
+        </Location>
 
 
 ## copyright + license
