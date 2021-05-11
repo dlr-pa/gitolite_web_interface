@@ -54,4 +54,4 @@ Date: 2021-05-11 (last change).
 
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991
 
-Copyright (C) 2021 Daniel Mohr
+Copyright (C) 2021 Daniel Mohr and Deutsches Zentrum fuer Luft- und Raumfahrt e. V., D-51170 Koeln
