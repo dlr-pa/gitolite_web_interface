@@ -21,7 +21,7 @@ Therefore this script *gitolite_web_interface.py* should give the possibility
 to add ssh keys over http. After this sskm over ssh can be used to further
 manage the keys.
 
-To use this script, you have to adapt the following few variable in the last
+To use this script, you have to adapt the following few variables in the last
 if clause (at the end of the file):
 
   * gitolite_wrapper_script

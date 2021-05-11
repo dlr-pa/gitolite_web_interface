@@ -26,7 +26,7 @@ you can use this script:
 
 First you have to enable sskm in gitolite: [changing keys -- self service key management](https://gitolite.com/gitolite/contrib/sskm)
 
-Next you should adapt in *gitolite_web_interface.py* the following few variable
+Next you should adapt in *gitolite_web_interface.py* the following few variables
 at the last if clause (at the end of the file):
 
   * gitolite_wrapper_script
