@@ -20,6 +20,14 @@ But until now there is no possibility to manage ssh keys over http.
 Therefore this script *gitolite_web_interface.py* should give the possibility
 to add ssh keys over http. After this sskm over ssh can be used to further
 manage the keys.
+
+To use this script, you have to adapt the following few variable in the last
+if clause (at the end of the file):
+
+  * gitolite_wrapper_script
+  * ssh_gitolite_user
+  * ssh_host
+  * only_https
 """
 
 import cgi
@@ -40,7 +48,8 @@ def output(title='test page', content='<h1>test</h1>'):
     print('<body>')
     print(content)
     print('<hr>')
-    print('<p align="right"><a href="/www/">back to start</a></p>')
+    print('<p align="right"><a href="' + os.environ['SCRIPT_NAME'] +
+          '">back to start</a></p>')
     print('</body>')
     print('</html>')
 
@@ -51,10 +60,14 @@ def cmdlink(name, additionalinfo=''):
     return ret
 
 
-def main():
+def gitolite_web_interface(
+        gitolite_wrapper_script,
+        ssh_gitolite_user,
+        ssh_host=None,
+        only_https=True):
     # run only with https
-    if ((not 'HTTPS' in os.environ) or
-            (os.environ['HTTPS'] != 'on')):
+    if (only_https and ((not 'HTTPS' in os.environ) or
+                        (os.environ['HTTPS'] != 'on'))):
         output(title='error: no HTTPS',
                content='error: HTTPS is not used')
         exit(0)
@@ -62,21 +75,24 @@ def main():
         output(title='error: no REMOTE_USER',
                content='error: no REMOTE_USER known')
         exit(0)
+    user = os.environ.get('REMOTE_USER')
+    if not 'SCRIPT_NAME' in os.environ.keys():
+        output(title='error: no SCRIPT_NAME',
+               content='error: no SCRIPT_NAME')
+        exit(0)
+    if ssh_host is None:
+        ssh_host = os.environ['HTTP_HOST']
     sskm_help_link = '<p>sskm help: <a href="'
     sskm_help_link += 'https://gitolite.com/gitolite/contrib/sskm.html" '
     sskm_help_link += 'target="_blank">'
     sskm_help_link += 'changing keys -- self service key management</a></p>'
-    user = os.environ.get('REMOTE_USER')
-    if not 'REQUEST_URI' in os.environ.keys():
-        exit(3)
     if (('QUERY_STRING' in os.environ.keys()) and
             (len(os.environ['QUERY_STRING']) > 0)):
         if os.environ['QUERY_STRING'] in ['help', 'info']:
             cp = subprocess.run(
-                ['/var/www/bin/gitolite-suexec-wrapper.sh'],
+                [gitolite_wrapper_script],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                shell=True,  # cwd=os.path.join(tmpdir, serverdir),
-                timeout=3, check=True)
+                shell=True, timeout=3, check=True)
             content = '<h1>gitolite command (' + \
                 os.environ['QUERY_STRING'] + ')</h1>\n'
             content += '<h2>Output:</h2>'
@@ -93,10 +109,9 @@ def main():
                 new_env = os.environ.copy()
                 new_env["QUERY_STRING"] = "sskm list"
                 cp = subprocess.run(
-                    ['/var/www/bin/gitolite-suexec-wrapper.sh'],
+                    [gitolite_wrapper_script],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    shell=True,
-                    timeout=3, check=False, env=new_env)
+                    shell=True, timeout=3, check=False, env=new_env)
                 content += '<pre>' + cp.stdout.decode() + '</pre>'
                 content += '</pre>'
                 # create form
@@ -128,13 +143,10 @@ def main():
                 if ('name' not in form) or ('pubkey' not in form):
                     output(title='ERROR', content='<p>no post data</p>')
                     exit(0)
-                #content = "<p>name:", form["name"].value
-                #content += "<p>pubkey:", form["pubkey"].value
-                # output(content=content)
                 new_env = os.environ.copy()
                 new_env["QUERY_STRING"] = 'sskm add ' + form["name"].value
                 cp = subprocess.run(
-                    ['/var/www/bin/gitolite-suexec-wrapper.sh'],
+                    [gitolite_wrapper_script],
                     input=form["pubkey"].value.encode(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     shell=True,
@@ -147,27 +159,25 @@ def main():
                 new_env = os.environ.copy()
                 new_env["QUERY_STRING"] = "sskm list"
                 cp = subprocess.run(
-                    ['/var/www/bin/gitolite-suexec-wrapper.sh'],
+                    [gitolite_wrapper_script],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    shell=True,
-                    timeout=3, check=False, env=new_env)
+                    shell=True, timeout=3, check=False, env=new_env)
                 content += '<pre>' + cp.stdout.decode() + '</pre>'
                 content += '</pre>'
                 content += '<h2>Next Step:</h2>'
                 content += '<p>Now you have to verify your ssh key (by ssh). '
                 content += 'You cannot continue with the webinterface.</p>'
                 content += '<p>Example:<pre>'
-                content += 'ssh -i .ssh/newkey gitolite@' + \
-                    os.environ['HTTP_HOST'] + \
-                    ' sskm confirm-add ' + form["name"].value
+                content += 'ssh -i .ssh/newkey ' + ssh_gitolite_user + '@' + \
+                    ssh_host + ' sskm confirm-add ' + form["name"].value
                 content += '</pre></p>'
                 content += '<h2>Cancel:</h2>'
                 content += '<p>You can cancel with something like:\n<pre>'
-                content += 'ssh gitolite@' + \
-                    os.environ['HTTP_HOST'] + \
+                content += 'ssh ' + ssh_gitolite_user + '@' + ssh_host + \
                     ' sskm undo-add ' + form["name"].value
                 content += '</pre>\n'
-                content += '<a href="/www/?sskm undo-add ' + form["name"].value
+                content += '<a href="' + os.environ.get('SCRIPT_NAME') + \
+                    '?sskm undo-add ' + form["name"].value
                 content += '">cancel ' + form["name"].value + ' by web</a>'
                 content += '</p>'
                 output(title='manage ssh keys with sskm (added)',
@@ -179,7 +189,7 @@ def main():
             content += sskm_help_link
             content += '<h2>Output:</h2>'
             cp = subprocess.run(
-                ['/var/www/bin/gitolite-suexec-wrapper.sh'],
+                [gitolite_wrapper_script],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 shell=True,
                 timeout=3, check=True)
@@ -188,10 +198,9 @@ def main():
             new_env = os.environ.copy()
             new_env["QUERY_STRING"] = "sskm list"
             cp = subprocess.run(
-                ['/var/www/bin/gitolite-suexec-wrapper.sh'],
+                [gitolite_wrapper_script],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                shell=True,
-                timeout=3, check=False, env=new_env)
+                shell=True, timeout=3, check=False, env=new_env)
             content += '<pre>' + cp.stdout.decode() + '</pre>'
             title = os.environ['QUERY_STRING'].replace('%20', ' ')
             output(content=content, title=title)
@@ -213,4 +222,19 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # define the script, which is called when using gitolite over http
+    # as described in: https://gitolite.com/gitolite/contrib/ssh-and-http
+    gitolite_wrapper_script = '/var/www/bin/gitolite-suexec-wrapper.sh'
+    # define the hosting user of your gitolite installation
+    # as described in https://gitolite.com/gitolite/quick_install.html
+    ssh_gitolite_user = 'gitolite'
+    # define the ssh host as used in a possible ssh comand:
+    ssh_host = None
+    # define if only https traffic is accaptable:
+    only_https = True
+    # cal the main program:
+    gitolite_web_interface(
+        gitolite_wrapper_script,
+        ssh_gitolite_user,
+        ssh_host=ssh_host,
+        only_https=only_https)
