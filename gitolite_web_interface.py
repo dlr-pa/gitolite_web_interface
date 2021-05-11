@@ -4,8 +4,8 @@ Author: Daniel Mohr.
 Date: 2021-05-11 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
-[gitolite](https://gitolite.com/gitolite/) is a great tool to manage git
-repositories and get access by ssh.
+[gitolite](https://gitolite.com/gitolite/) is a great tool to manage
+[git](https://git-scm.com/) repositories and get access by ssh.
 
 There are also possibilities to use http for transport, e. g.:
 
@@ -20,6 +20,11 @@ But until now there is no possibility to manage ssh keys over http.
 Therefore this script *gitolite_web_interface.py* should give the possibility
 to add ssh keys over http. After this sskm over ssh can be used to further
 manage the keys.
+
+Especially if you have already a directory service (e. g. LDAP)
+for managing user accounts with password, this script
+*gitolite_web_interface.py* provides the possibility to let the users
+manage their ssh keys in a gitolite environment.
 
 To use this script, you have to adapt the following few variables in the last
 if clause (at the end of the file):
@@ -228,9 +233,10 @@ if __name__ == "__main__":
     # define the hosting user of your gitolite installation
     # as described in https://gitolite.com/gitolite/quick_install.html
     ssh_gitolite_user = 'gitolite'
-    # define the ssh host as used in a possible ssh comand:
+    # define the ssh host as used in a possible ssh comand;
+    # if None, it will be set to HTTP_HOST:
     ssh_host = None
-    # define if only https traffic is accaptable:
+    # define if only https traffic is accaptable (True or False):
     only_https = True
     # cal the main program:
     gitolite_web_interface(
