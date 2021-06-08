@@ -69,7 +69,8 @@ def gitolite_web_interface(
         gitolite_wrapper_script,
         ssh_gitolite_user,
         ssh_host=None,
-        only_https=True):
+        only_https=True,
+        provided_options={'help': True, 'info': True, 'mngkey': True}):
     # run only with https
     if (only_https and ((not 'HTTPS' in os.environ) or
                         (os.environ['HTTPS'] != 'on'))):
@@ -93,7 +94,8 @@ def gitolite_web_interface(
     sskm_help_link += 'changing keys -- self service key management</a></p>'
     if (('QUERY_STRING' in os.environ.keys()) and
             (len(os.environ['QUERY_STRING']) > 0)):
-        if os.environ['QUERY_STRING'] in ['help', 'info']:
+        if ((os.environ['QUERY_STRING'] in ['help', 'info']) and
+                (provided_options[os.environ['QUERY_STRING']])):
             cp = subprocess.run(
                 [gitolite_wrapper_script],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -105,7 +107,8 @@ def gitolite_web_interface(
             title = 'gitolite command (' + os.environ['QUERY_STRING'] + ')'
             output(content=content, title=title)
             exit(0)
-        elif os.environ['QUERY_STRING'].startswith('mngkey'):
+        elif (os.environ['QUERY_STRING'].startswith('mngkey') and
+              provided_options['mngkey']):
             # manage ssh keys with sskm
             if os.environ['QUERY_STRING'] in ['mngkey', 'mngkey0']:
                 content = '<h1>manage ssh keys with sskm</h1>\n'
@@ -143,7 +146,8 @@ def gitolite_web_interface(
                 content += '<input type="reset" value="reset">'
                 content += '</p>'
                 output(title='manage ssh keys with sskm', content=content)
-            elif os.environ['QUERY_STRING'] == 'mngkey1':
+            elif (os.environ['QUERY_STRING'] == 'mngkey1' and
+                  provided_options['mngkey']):
                 if ssh_host is None:
                     ssh_host = os.environ['HTTP_HOST']
                 form = cgi.FieldStorage()
@@ -190,7 +194,8 @@ def gitolite_web_interface(
                 output(title='manage ssh keys with sskm (added)',
                        content=content)
             exit(0)
-        elif os.environ['QUERY_STRING'].startswith('sskm%20undo-add%20'):
+        elif (os.environ['QUERY_STRING'].startswith('sskm%20undo-add%20') and
+              provided_options['mngkey']):
             content = '<h1>manage ssh keys with sskm (' + \
                 os.environ['QUERY_STRING'].replace('%20', ' ') + ')</h1>\n'
             content += sskm_help_link
@@ -221,9 +226,12 @@ def gitolite_web_interface(
     content = ''
     content += '<h1>Options</h1>\n'
     content += '<p><ul>'
-    content += cmdlink('help')
-    content += cmdlink('info')
-    content += cmdlink('mngkey')
+    if provided_options['help']:
+        content += cmdlink('help')
+    if provided_options['info']:
+        content += cmdlink('info')
+    if provided_options['mngkey']:
+        content += cmdlink('mngkey')
     output(title='start', content=content)
     exit(0)
 
@@ -240,9 +248,15 @@ if __name__ == "__main__":
     ssh_host = None
     # define if only https traffic is accaptable (True or False):
     only_https = True
-    # cal the main program:
+    # define, which options should be provided:
+    provided_options = {
+        'help': True,
+        'info': True,
+        'mngkey': True}
+    # call the main program:
     gitolite_web_interface(
         gitolite_wrapper_script,
         ssh_gitolite_user,
         ssh_host=ssh_host,
-        only_https=only_https)
+        only_https=only_https,
+        provided_options=provided_options)
