@@ -226,12 +226,9 @@ def gitolite_web_interface(
     content = ''
     content += '<h1>Options</h1>\n'
     content += '<p><ul>'
-    if provided_options['help']:
-        content += cmdlink('help')
-    if provided_options['info']:
-        content += cmdlink('info')
-    if provided_options['mngkey']:
-        content += cmdlink('mngkey')
+    for cmd in provided_options.keys():
+        if provided_options[cmd]:
+            content += cmdlink(cmd)
     output(title='start', content=content)
     exit(0)
 
