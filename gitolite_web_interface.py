@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2021-05-11 (last change).
+Date: 2021-05-11, 2021-06-08 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -76,17 +76,17 @@ def gitolite_web_interface(
         output(title='error: no HTTPS',
                content='error: HTTPS is not used')
         exit(0)
+    # run only, if REMOTE_USER is known
     if not 'REMOTE_USER' in os.environ.keys():
         output(title='error: no REMOTE_USER',
                content='error: no REMOTE_USER known')
         exit(0)
     user = os.environ.get('REMOTE_USER')
+    # run only, if SCRIPT_NAME is known
     if not 'SCRIPT_NAME' in os.environ.keys():
         output(title='error: no SCRIPT_NAME',
                content='error: no SCRIPT_NAME')
         exit(0)
-    if ssh_host is None:
-        ssh_host = os.environ['HTTP_HOST']
     sskm_help_link = '<p>sskm help: <a href="'
     sskm_help_link += 'https://gitolite.com/gitolite/contrib/sskm.html" '
     sskm_help_link += 'target="_blank">'
@@ -144,6 +144,8 @@ def gitolite_web_interface(
                 content += '</p>'
                 output(title='manage ssh keys with sskm', content=content)
             elif os.environ['QUERY_STRING'] == 'mngkey1':
+                if ssh_host is None:
+                    ssh_host = os.environ['HTTP_HOST']
                 form = cgi.FieldStorage()
                 if ('name' not in form) or ('pubkey' not in form):
                     output(title='ERROR', content='<p>no post data</p>')
