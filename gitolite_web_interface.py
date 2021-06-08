@@ -33,6 +33,9 @@ if clause (at the end of the file):
   * ssh_gitolite_user
   * ssh_host
   * only_https
+
+Further there is an option to let the user create repositories (no wild repo).
+
 """
 
 import cgi
@@ -70,7 +73,10 @@ def gitolite_web_interface(
         ssh_gitolite_user,
         ssh_host=None,
         only_https=True,
-        provided_options={'help': True, 'info': True, 'mngkey': True}):
+        gitolite_cmd='gitolite',
+        gitolite_home='/srv/gitolite',
+        provided_options={'help': True, 'info': True, 'mngkey': True,
+                          'createrepo': True}):
     # run only with https
     if (only_https and ((not 'HTTPS' in os.environ) or
                         (os.environ['HTTPS'] != 'on'))):
@@ -110,7 +116,8 @@ def gitolite_web_interface(
         elif (os.environ['QUERY_STRING'].startswith('mngkey') and
               provided_options['mngkey']):
             # manage ssh keys with sskm
-            if os.environ['QUERY_STRING'] in ['mngkey', 'mngkey0']:
+            if ((os.environ['QUERY_STRING'] in ['mngkey', 'mngkey0']) and
+                    provided_options['mngkey']):
                 content = '<h1>manage ssh keys with sskm</h1>\n'
                 content += sskm_help_link
                 content += '<h2>Your current keys are:</h2>'
@@ -121,7 +128,6 @@ def gitolite_web_interface(
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     shell=True, timeout=3, check=False, env=new_env)
                 content += '<pre>' + cp.stdout.decode() + '</pre>'
-                content += '</pre>'
                 # create form
                 content += '<h2>Your new ssh key:</h2>'
                 content += '<p>Paste your public ssh key, which is typically '
@@ -174,7 +180,6 @@ def gitolite_web_interface(
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     shell=True, timeout=3, check=False, env=new_env)
                 content += '<pre>' + cp.stdout.decode() + '</pre>'
-                content += '</pre>'
                 content += '<h2>Next Step:</h2>'
                 content += '<p>Now you have to verify your ssh key (by ssh). '
                 content += 'You cannot continue with the web interface.</p>'
@@ -217,6 +222,124 @@ def gitolite_web_interface(
             title = os.environ['QUERY_STRING'].replace('%20', ' ')
             output(content=content, title=title)
             exit(0)
+        elif (os.environ['QUERY_STRING'].startswith('createrepo') and
+              provided_options['createrepo']):
+            # create a repository based on groups (assume users are in groups)
+            # We assume the group names are like [access]_[name].
+            # [access] defines the possibilities:
+            #   owner: Can create repositories in the directory [name].
+            #          (And get the permission RW+ in gitolite.)
+            #   writer: Can read and write repositories in the directory [name].
+            #           (This is the permission RW in gitolite.)
+            #   reader: Can read repositories in the directory [name].
+            #           (This is the permission R in gitolite.)
+            # With the information of a [reponame], this will become in
+            # the gitolite configuration:
+            #   @repos_[name] = [name]/[reponame]
+            #   repo @repos_[name]
+            #     RW+ = @owner_[name]
+            #     RW = @writer_[name]
+            #     R = @reader_[name]
+            # It is possible to create many repos in the directory [name]
+            # accessible by these groups.
+            if ((os.environ['QUERY_STRING'] in ['createrepo']) and
+                    provided_options['createrepo']):
+                content = '<h1>create repositoy</h1>\n'
+                content += '<h2>Your current groups are:</h2>\n'
+                new_env = os.environ.copy()
+                new_env["HOME"] = gitolite_home
+                my_cmd = gitolite_cmd + ' list-memberships -u ' + user
+                cp = subprocess.run(
+                    my_cmd,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    shell=True, timeout=3, check=True, env=new_env)
+                groups = cp.stdout.splitlines()
+                names = set()
+                for i in range(len(groups)):
+                    groups[i] = groups[i][1:]
+                    ap, pn = groups[i].split(b'_', maxsplit=1)
+                    if ap == b'owner':
+                        names.add(pn)
+                content += '<pre>' + cp.stdout.decode() + '</pre>\n'
+                content += '<h2>You can create repositories for:</h2>\n'
+                content += '<pre>' + b','.join(names).decode() + '</pre>\n'
+                content += '<h2>New repo:</h2>\n'
+                content += '<p>The repository path on the server will be: '
+                content += '[project directory] + "/" + [repository name]</p>'
+                # create form
+                content += '<p>'
+                content += '<form method="POST" action="' + \
+                    os.environ.get('SCRIPT_NAME') + '?createrepo1">'
+                content += '<table>'
+                content += '<tr>'
+                content += '<td>project directory: </td>'
+                content += '<td>'
+                content += '<select name="project" size="1">'
+                for pn in names:
+                    content += '<option>' + pn.decode() + '</option>'
+                content += '</select>'
+                content += '</td>'
+                content += '</tr><tr>'
+                content += '<tr>'
+                content += '<td>repository name: </td>'
+                content += '<td><input type="text" name="name" size="42"></td>'
+                content += '</tr><tr>'
+                content += '</table>'
+                content += '<input type="submit" value="submit"> '
+                content += '<input type="reset" value="reset">'
+                content += '</p>'
+                output(title='create repo', content=content)
+                exit(0)
+            elif (os.environ['QUERY_STRING'] == 'createrepo1' and
+                  provided_options['createrepo']):
+                form = cgi.FieldStorage()
+                if ('project' not in form) or ('name' not in form):
+                    output(title='ERROR', content=str(form))
+                    output(title='ERROR', content='<p>no post data</p>')
+                    exit(0)
+                content = '<h1>repository created</h1>\n'
+                new_env = os.environ.copy()
+                new_env["HOME"] = gitolite_home
+                my_cmd = gitolite_cmd + ' list-memberships -u ' + user
+                cp = subprocess.run(
+                    my_cmd,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    shell=True, timeout=3, check=True, env=new_env)
+                groups = cp.stdout.splitlines()
+                names = set()
+                for i in range(len(groups)):
+                    groups[i] = groups[i][1:]
+                    ap, pn = groups[i].split(b'_', maxsplit=1)
+                    if ap == b'owner':
+                        names.add(pn)
+                if not form["project"].value.encode() in names:
+                    output(
+                        title='ERROR',
+                        content='<p>You cannot create a repo in this project.</p>')
+                if ssh_host is None:
+                    ssh_host = os.environ['HTTP_HOST']
+                content += '<h2>config lines:</h2>\n'
+                content += '<pre>\n'
+                content += '@repos_' + form["project"].value
+                content += ' = ' + form["project"].value + '/'
+                content += form["name"].value + '\n'
+                content += '  RW+ = @owner_' + form["project"].value + '\n'
+                content += '  RW = @writer_' + form["project"].value + '\n'
+                content += '  R = @reader_' + form["project"].value + '\n'
+                content += '</pre>\n'
+                content += '<h2>Repository access:</h2>\n'
+                content += '<ul>'
+                content += '<li><pre>git clone git+ssh://'
+                content += ssh_gitolite_user + '@' + ssh_host + \
+                    '/' + form["project"].value + '/' + \
+                    form["name"].value + '</pre></li>'
+                content += '<li><pre>git clone https://'
+                content += os.environ['HTTP_HOST'] + \
+                    '/git/' + form["project"].value + '/' + \
+                    form["name"].value + '</pre></li>'
+                content += '</ul>'
+                output(title='repo created', content=content)
+                exit(0)
         else:
             output(
                 title='ERROR',
@@ -245,15 +368,30 @@ if __name__ == "__main__":
     ssh_host = None
     # define if only https traffic is accaptable (True or False):
     only_https = True
+    # define the gitolite command used on command line
+    gitolite_cmd = 'gitolite'
+    # define the gitolite home directory
+    gitolite_home = '/srv/gitolite'
     # define, which options should be provided:
     provided_options = {
         'help': True,
         'info': True,
-        'mngkey': True}
+        'mngkey': True,
+        'createrepo': False}
+    # special setting for lx117:
+    gitolite_wrapper_script = '/srv/www/bin/gitolite-suexec-wrapper.sh'
+    ssh_gitolite_user = 'git'
+    provided_options = {
+        'help': True,
+        'info': True,
+        'mngkey': True,
+        'createrepo': True}
     # call the main program:
     gitolite_web_interface(
         gitolite_wrapper_script,
         ssh_gitolite_user,
         ssh_host=ssh_host,
         only_https=only_https,
+        gitolite_cmd=gitolite_cmd,
+        gitolite_home=gitolite_home,
         provided_options=provided_options)
