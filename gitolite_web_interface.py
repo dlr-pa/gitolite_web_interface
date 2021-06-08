@@ -41,6 +41,7 @@ Further there is an option to let the user create repositories (no wild repo).
 import cgi
 import os
 import subprocess
+import tempfile
 
 
 def output(title='test page', content='<h1>test</h1>'):
@@ -75,6 +76,7 @@ def gitolite_web_interface(
         only_https=True,
         gitolite_cmd='gitolite',
         gitolite_home='/srv/gitolite',
+        gitolite_admin_repo='repositories/gitolite-admin.git',
         provided_options={'help': True, 'info': True, 'mngkey': True,
                           'createrepo': True}):
     # run only with https
@@ -93,6 +95,11 @@ def gitolite_web_interface(
     if not 'SCRIPT_NAME' in os.environ.keys():
         output(title='error: no SCRIPT_NAME',
                content='error: no SCRIPT_NAME')
+        exit(0)
+    # run only, if HTTP_HOST is known
+    if not 'HTTP_HOST' in os.environ.keys():
+        output(title='error: no HTTP_HOST',
+               content='error: no HTTP_HOST')
         exit(0)
     sskm_help_link = '<p>sskm help: <a href="'
     sskm_help_link += 'https://gitolite.com/gitolite/contrib/sskm.html" '
@@ -313,20 +320,101 @@ def gitolite_web_interface(
                     if ap == b'owner':
                         names.add(pn)
                 if not form["project"].value.encode() in names:
+                    content = '<p>You cannot create a repo in this project "'
+                    content += form["project"].value.encode() + '".</p>'
                     output(
                         title='ERROR',
-                        content='<p>You cannot create a repo in this project.</p>')
+                        content=content)
+                    exit(0)
                 if ssh_host is None:
                     ssh_host = os.environ['HTTP_HOST']
                 content += '<h2>config lines:</h2>\n'
                 content += '<pre>\n'
-                content += '@repos_' + form["project"].value
-                content += ' = ' + form["project"].value + '/'
-                content += form["name"].value + '\n'
-                content += '  RW+ = @owner_' + form["project"].value + '\n'
-                content += '  RW = @writer_' + form["project"].value + '\n'
-                content += '  R = @reader_' + form["project"].value + '\n'
+                repo_group = '@repos_' + form["project"].value
+                repo_path = form["project"].value + '/' + form["name"].value
+                content += repo_group + ' = ' + repo_path + '\n'
+                content += 'repo ' + repo_group + '\n'
+                content += '    RW+ = @owner_' + form["project"].value + '\n'
+                content += '    RW = @writer_' + form["project"].value + '\n'
+                content += '    R = @reader_' + form["project"].value + '\n'
                 content += '</pre>\n'
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    git_cmd = 'git clone ' + os.path.join(gitolite_home,
+                                                          gitolite_admin_repo)
+                    admin_repo_name = os.path.splitext(
+                        os.path.split(gitolite_admin_repo)[1])[0]
+                    cp = subprocess.run(
+                        git_cmd,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        shell=True, cwd=tmpdir, timeout=3, check=True,
+                        env=new_env)
+                    git_cmd = 'git config user.name "' + user + '"'
+                    cp = subprocess.run(
+                        git_cmd,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+                        timeout=3, check=True, env=new_env)
+                    git_cmd = 'git config user.email "' + user + '@'
+                    git_cmd += os.environ.get('HTTP_HOST') + '"'
+                    cp = subprocess.run(
+                        git_cmd,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+                        timeout=3, check=True, env=new_env)
+                    conf_path = os.path.join(
+                        tmpdir, admin_repo_name, 'conf/gitolite.conf')
+                    with open(conf_path, 'r') as fd:
+                        gitolite_config = fd.read().splitlines()
+                    new_config = []
+                    repo_group_def = False
+                    repo_group_def_index = None
+                    repo_def = False
+                    it = 0
+                    for line in gitolite_config:
+                        if line.startswith(repo_group):
+                            repo_group_def_index = it
+                            if repo_path in line:
+                                repo_group_def = True
+                        elif (line.startswith('repo ') and
+                              (repo_path in line)):
+                            repo_def = True
+                        if repo_group_def and repo_def:
+                            break
+                        it += 1
+                    if not repo_group_def:
+                        repo_group_def_str = repo_group + ' = ' + repo_path
+                        if repo_group_def_index is not None:
+                            gitolite_config.insert(repo_group_def_index,
+                                                   repo_group_def_str)
+                        else:
+                            gitolite_config.append(repo_group_def_str)
+                    if not repo_def:
+                        gitolite_config.append('repo ' + repo_group)
+                        gitolite_config.append(
+                            '    RW+ = @owner_' + form["project"].value)
+                        gitolite_config.append(
+                            '    RW = @writer_' + form["project"].value)
+                        gitolite_config.append(
+                            '    R = @reader_' + form["project"].value)
+                    if repo_group_def and repo_def:
+                        content = '<p>Repository "'
+                        content += repo_path + '"exists.</p>'
+                        output(
+                            title='ERROR',
+                            content=content)
+                        exit(0)
+                    #content += '<h3>debug</h3>'
+                    #content += '<pre>'
+                    #content += '\n'.join(gitolite_config)
+                    #content += '</pre>'
+                    git_cmd = 'git commit -m "added repo ' + repo_path + '"'
+                    git_cmd += os.environ.get('HTTP_HOST') + '"'
+                    cp = subprocess.run(
+                        git_cmd,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+                        timeout=3, check=True, env=new_env)
+                    # next we should do a push, but before test it!
                 content += '<h2>Repository access:</h2>\n'
                 content += '<ul>'
                 content += '<li><pre>git clone git+ssh://'
@@ -372,6 +460,8 @@ if __name__ == "__main__":
     gitolite_cmd = 'gitolite'
     # define the gitolite home directory
     gitolite_home = '/srv/gitolite'
+    # define the gitolite admin repository path in the gitolite home
+    gitolite_admin_repo = 'repositories/gitolite-admin.git'
     # define, which options should be provided:
     provided_options = {
         'help': True,
@@ -394,4 +484,5 @@ if __name__ == "__main__":
         only_https=only_https,
         gitolite_cmd=gitolite_cmd,
         gitolite_home=gitolite_home,
+        gitolite_admin_repo=gitolite_admin_repo,
         provided_options=provided_options)
