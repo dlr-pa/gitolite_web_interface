@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2021-05-11, 2021-06-08 (last change).
+Date: 2021-05-11, 2021-06-08, 2021-06-09 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -43,6 +43,7 @@ import os
 import subprocess
 import tempfile
 
+debug = True
 
 def output(title='test page', content='<h1>test</h1>'):
     print('Content-type:text/html\n')
@@ -376,7 +377,7 @@ def gitolite_web_interface(
                             if repo_path in line:
                                 repo_group_def = True
                         elif (line.startswith('repo ') and
-                              (repo_path in line)):
+                              (repo_group in line)):
                             repo_def = True
                         if repo_group_def and repo_def:
                             break
@@ -387,8 +388,10 @@ def gitolite_web_interface(
                             gitolite_config.insert(repo_group_def_index,
                                                    repo_group_def_str)
                         else:
+                            gitolite_config.append('')
                             gitolite_config.append(repo_group_def_str)
                     if not repo_def:
+                        gitolite_config.append('')
                         gitolite_config.append('repo ' + repo_group)
                         gitolite_config.append(
                             '    RW+ = @owner_' + form["project"].value)
@@ -403,18 +406,60 @@ def gitolite_web_interface(
                             title='ERROR',
                             content=content)
                         exit(0)
-                    #content += '<h3>debug</h3>'
-                    #content += '<pre>'
-                    #content += '\n'.join(gitolite_config)
-                    #content += '</pre>'
-                    git_cmd = 'git commit -m "added repo ' + repo_path + '"'
-                    git_cmd += os.environ.get('HTTP_HOST') + '"'
+                    #if debug:
+                    #    content += '<h3>debug</h3>'
+                    #    content += '<pre>'
+                    #    content += '\n'.join(gitolite_config)
+                    #    content += '</pre>'
+                    with open(conf_path, 'w') as fd:
+                        fd.write('\n'.join(gitolite_config))
+                    git_cmd = 'git add conf/gitolite.conf'
                     cp = subprocess.run(
                         git_cmd,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
                         timeout=3, check=True, env=new_env)
-                    # next we should do a push, but before test it!
+                    if debug:
+                        content += '<h3>debug</h3>'
+                        content += '<pre>'
+                        content += git_cmd
+                        content += '</pre>'
+                        content += '<pre>'
+                        content += cp.stdout.decode()
+                        content += '</pre>'
+                    git_cmd = 'git commit -m "added repo ' + repo_path + '"'
+                    cp = subprocess.run(
+                        git_cmd,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+                        timeout=3, check=True, env=new_env)
+                    if debug:
+                        content += '<h3>debug</h3>'
+                        content += '<pre>'
+                        content += git_cmd
+                        content += '</pre>'
+                        content += '<pre>'
+                        content += cp.stdout.decode()
+                        content += '</pre>'
+                    git_cmd = 'git push'
+                    git_cmd = 'pwd;ls;cat .git/config;git push'
+                    git_cmd = 'gitolite push'
+                    cp = subprocess.run(
+                        git_cmd,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+                        timeout=3, check=False, env=new_env)
+                    if debug:
+                        content += '<h3>debug</h3>'
+                        content += '<pre>'
+                        content += git_cmd
+                        content += '</pre>'
+                        content += '<pre>'
+                        content += cp.stdout.decode()
+                        content += '</pre>'
+                        content += '<pre>'
+                        content += cp.stderr.decode()
+                        content += '</pre>'
                 content += '<h2>Repository access:</h2>\n'
                 content += '<ul>'
                 content += '<li><pre>git clone git+ssh://'
