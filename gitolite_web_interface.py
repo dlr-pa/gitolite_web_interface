@@ -45,6 +45,7 @@ import tempfile
 
 debug = True
 
+
 def output(title='test page', content='<h1>test</h1>'):
     print('Content-type:text/html\n')
     print('<html>')
@@ -406,7 +407,7 @@ def gitolite_web_interface(
                             title='ERROR',
                             content=content)
                         exit(0)
-                    #if debug:
+                    # if debug:
                     #    content += '<h3>debug</h3>'
                     #    content += '<pre>'
                     #    content += '\n'.join(gitolite_config)
