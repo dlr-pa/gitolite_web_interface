@@ -43,6 +43,7 @@ You can also overide the CONFIG variable in the last if clause
 import cgi
 import os
 import subprocess
+import sys
 import tempfile
 
 DEBUG = True
@@ -118,23 +119,23 @@ def gitolite_web_interface(
                         (os.environ['HTTPS'] != 'on'))):
         output(title='error: no HTTPS',
                content='error: HTTPS is not used')
-        exit(0)
+        sys.exit(0)
     # run only, if REMOTE_USER is known
     if 'REMOTE_USER' not in os.environ.keys():
         output(title='error: no REMOTE_USER',
                content='error: no REMOTE_USER known')
-        exit(0)
+        sys.exit(0)
     user = os.environ.get('REMOTE_USER')
     # run only, if SCRIPT_NAME is known
     if 'SCRIPT_NAME' not in os.environ.keys():
         output(title='error: no SCRIPT_NAME',
                content='error: no SCRIPT_NAME')
-        exit(0)
+        sys.exit(0)
     # run only, if HTTP_HOST is known
     if 'HTTP_HOST' not in os.environ.keys():
         output(title='error: no HTTP_HOST',
                content='error: no HTTP_HOST')
-        exit(0)
+        sys.exit(0)
     sskm_help_link = '<p>sskm help: <a href="'
     sskm_help_link += 'https://gitolite.com/gitolite/contrib/sskm.html" '
     sskm_help_link += 'target="_blank">'
@@ -153,7 +154,7 @@ def gitolite_web_interface(
             content += '<pre>' + cpi.stdout.decode() + '</pre>'
             title = 'gitolite command (' + os.environ['QUERY_STRING'] + ')'
             output(content=content, title=title)
-            exit(0)
+            sys.exit(0)
         elif (os.environ['QUERY_STRING'].startswith('mngkey') and
               provided_options['mngkey']):
             # manage ssh keys with sskm
@@ -200,7 +201,7 @@ def gitolite_web_interface(
                 form = cgi.FieldStorage()
                 if ('name' not in form) or ('pubkey' not in form):
                     output(title='ERROR', content='<p>no post data</p>')
-                    exit(0)
+                    sys.exit(0)
                 new_env = os.environ.copy()
                 new_env["QUERY_STRING"] = 'sskm add ' + form["name"].value
                 cpi = subprocess.run(
@@ -239,7 +240,7 @@ def gitolite_web_interface(
                 content += '</p>'
                 output(title='manage ssh keys with sskm (added)',
                        content=content)
-            exit(0)
+            sys.exit(0)
         elif (os.environ['QUERY_STRING'].startswith('sskm%20undo-add%20') and
               provided_options['mngkey']):
             content = '<h1>manage ssh keys with sskm (' + \
@@ -262,7 +263,7 @@ def gitolite_web_interface(
             content += '<pre>' + cpi.stdout.decode() + '</pre>'
             title = os.environ['QUERY_STRING'].replace('%20', ' ')
             output(content=content, title=title)
-            exit(0)
+            sys.exit(0)
         elif (os.environ['QUERY_STRING'].startswith('createrepo') and
               provided_options['createrepo']):
             # create a repository based on groups (assume users are in groups)
@@ -331,14 +332,14 @@ def gitolite_web_interface(
                 content += '<input type="reset" value="reset">'
                 content += '</p>'
                 output(title='create repo', content=content)
-                exit(0)
+                sys.exit(0)
             elif (os.environ['QUERY_STRING'] == 'createrepo1' and
                   provided_options['createrepo']):
                 form = cgi.FieldStorage()
                 if ('project' not in form) or ('name' not in form):
                     output(title='ERROR', content=str(form))
                     output(title='ERROR', content='<p>no post data</p>')
-                    exit(0)
+                    sys.exit(0)
                 content = '<h1>repository created</h1>\n'
                 new_env = os.environ.copy()
                 new_env["HOME"] = gitolite_home
@@ -360,7 +361,7 @@ def gitolite_web_interface(
                     output(
                         title='ERROR',
                         content=content)
-                    exit(0)
+                    sys.exit(0)
                 if ssh_host is None:
                     ssh_host = os.environ['HTTP_HOST']
                 content += '<h2>config lines:</h2>\n'
@@ -438,7 +439,7 @@ def gitolite_web_interface(
                         output(
                             title='ERROR',
                             content=content)
-                        exit(0)
+                        sys.exit(0)
                     # if DEBUG:
                     #    content += '<h3>debug</h3>'
                     #    content += '<pre>'
@@ -505,13 +506,13 @@ def gitolite_web_interface(
                     form["name"].value + '</pre></li>'
                 content += '</ul>'
                 output(title='repo created', content=content)
-                exit(0)
+                sys.exit(0)
         else:
             output(
                 title='ERROR',
                 content='<p>do not understand"' +
                 os.environ['QUERY_STRING'] + '"</p>')
-            exit(0)
+            sys.exit(0)
     content = ''
     content += '<h1>Options</h1>\n'
     content += '<p><ul>'
@@ -519,7 +520,7 @@ def gitolite_web_interface(
         if provided_options[cmd]:
             content += cmdlink(cmd)
     output(title='start', content=content)
-    exit(0)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
