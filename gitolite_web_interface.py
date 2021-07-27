@@ -43,7 +43,9 @@ import os
 import subprocess
 import tempfile
 
-debug = True
+DEBUG = True
+
+# pylint: disable=missing-docstring
 
 
 def output(title='test page', content='<h1>test</h1>'):
@@ -79,27 +81,29 @@ def gitolite_web_interface(
         gitolite_cmd='gitolite',
         gitolite_home='/srv/gitolite',
         gitolite_admin_repo='repositories/gitolite-admin.git',
-        provided_options={'help': True, 'info': True, 'mngkey': True,
-                          'createrepo': True}):
+        provided_options=None):
+    if provided_options is None:
+        provided_options = {'help': True, 'info': True, 'mngkey': True,
+                            'createrepo': True}
     # run only with https
-    if (only_https and ((not 'HTTPS' in os.environ) or
+    if (only_https and (('HTTPS' not in os.environ) or
                         (os.environ['HTTPS'] != 'on'))):
         output(title='error: no HTTPS',
                content='error: HTTPS is not used')
         exit(0)
     # run only, if REMOTE_USER is known
-    if not 'REMOTE_USER' in os.environ.keys():
+    if 'REMOTE_USER' not in os.environ.keys():
         output(title='error: no REMOTE_USER',
                content='error: no REMOTE_USER known')
         exit(0)
     user = os.environ.get('REMOTE_USER')
     # run only, if SCRIPT_NAME is known
-    if not 'SCRIPT_NAME' in os.environ.keys():
+    if 'SCRIPT_NAME' not in os.environ.keys():
         output(title='error: no SCRIPT_NAME',
                content='error: no SCRIPT_NAME')
         exit(0)
     # run only, if HTTP_HOST is known
-    if not 'HTTP_HOST' in os.environ.keys():
+    if 'HTTP_HOST' not in os.environ.keys():
         output(title='error: no HTTP_HOST',
                content='error: no HTTP_HOST')
         exit(0)
@@ -238,7 +242,8 @@ def gitolite_web_interface(
             # [access] defines the possibilities:
             #   owner: Can create repositories in the directory [name].
             #          (And get the permission RW+ in gitolite.)
-            #   writer: Can read and write repositories in the directory [name].
+            #   writer: Can read and write repositories
+            #           in the directory [name].
             #           (This is the permission RW in gitolite.)
             #   reader: Can read repositories in the directory [name].
             #           (This is the permission R in gitolite.)
@@ -407,7 +412,7 @@ def gitolite_web_interface(
                             title='ERROR',
                             content=content)
                         exit(0)
-                    # if debug:
+                    # if DEBUG:
                     #    content += '<h3>debug</h3>'
                     #    content += '<pre>'
                     #    content += '\n'.join(gitolite_config)
@@ -420,7 +425,7 @@ def gitolite_web_interface(
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
                         timeout=3, check=True, env=new_env)
-                    if debug:
+                    if DEBUG:
                         content += '<h3>debug</h3>'
                         content += '<pre>'
                         content += git_cmd
@@ -434,7 +439,7 @@ def gitolite_web_interface(
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
                         timeout=3, check=True, env=new_env)
-                    if debug:
+                    if DEBUG:
                         content += '<h3>debug</h3>'
                         content += '<pre>'
                         content += git_cmd
@@ -450,7 +455,7 @@ def gitolite_web_interface(
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
                         timeout=3, check=False, env=new_env)
-                    if debug:
+                    if DEBUG:
                         content += '<h3>debug</h3>'
                         content += '<pre>'
                         content += git_cmd
