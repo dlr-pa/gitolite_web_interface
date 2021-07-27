@@ -36,8 +36,7 @@ variable CONFIG:
 
 Further there is an option to let the user create repositories (no wild repo).
 
-You can also overide the CONFIG variable in the last if clause
-(at the end of the file).
+You can also overide the CONFIG variable.
 """
 
 import cgi
@@ -73,6 +72,15 @@ CONFIG = {
         'mngkey': True,
         'createrepo': False}
 }
+# special setting:
+CONFIG['gitolite_wrapper_script'] = \
+    '/srv/www/bin/gitolite-suexec-wrapper.sh'
+CONFIG['ssh_gitolite_user'] = 'git'
+CONFIG['provided_options'] = {
+    'help': True,
+    'info': True,
+    'mngkey': True,
+    'createrepo': True}
 
 # pylint: disable=missing-docstring
 
@@ -524,15 +532,6 @@ def gitolite_web_interface(
 
 
 if __name__ == "__main__":
-    # special setting:
-    CONFIG['gitolite_wrapper_script'] = \
-        '/srv/www/bin/gitolite-suexec-wrapper.sh'
-    CONFIG['ssh_gitolite_user'] = 'git'
-    CONFIG['provided_options'] = {
-        'help': True,
-        'info': True,
-        'mngkey': True,
-        'createrepo': True}
     # call the main program:
     gitolite_web_interface(
         CONFIG['gitolite_wrapper_script'],
