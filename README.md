@@ -29,7 +29,7 @@ manage their ssh keys in a gitolite environment.
 ## Usage
 
 If you have installed [gitolite](https://gitolite.com/gitolite/) on a server
-and enabled http mode 
+and enabled http mode
 ([Making repositories available to both ssh and http mode clients](https://gitolite.com/gitolite/contrib/ssh-and-http)),
 you can use this script:
 
@@ -43,7 +43,7 @@ the global variable CONFIG:
   * ssh_host
   * only_https
 
-Now you can integrate calling it in [apache](https://apache.org/), 
+Now you can integrate calling it in [apache](https://apache.org/),
 e. g. add the following lines to your apache configuration:
 
         ScriptAlias /www/ /var/www/bin/gitolite_web_interface.py
