@@ -29,21 +29,21 @@ manage their ssh keys in a gitolite environment.
 ## Usage
 
 If you have installed [gitolite](https://gitolite.com/gitolite/) on a server
-and enabled http mode 
+and enabled http mode
 ([Making repositories available to both ssh and http mode clients](https://gitolite.com/gitolite/contrib/ssh-and-http)),
 you can use this script:
 
 First you have to enable sskm in gitolite: [changing keys -- self service key management](https://gitolite.com/gitolite/contrib/sskm)
 
-Next you should adapt in *gitolite_web_interface.py* the following few variables
-at the last if clause (at the end of the file):
+Next you should adapt in *gitolite_web_interface.py* the following few keys of
+the global variable CONFIG:
 
   * gitolite_wrapper_script
   * ssh_gitolite_user
   * ssh_host
   * only_https
 
-Now you can integrate calling it in [apache](https://apache.org/), 
+Now you can integrate calling it in [apache](https://apache.org/),
 e. g. add the following lines to your apache configuration:
 
         ScriptAlias /www/ /var/www/bin/gitolite_web_interface.py
@@ -59,7 +59,7 @@ e. g. add the following lines to your apache configuration:
 
 Author: Daniel Mohr.
 
-Date: 2021-05-11 (last change).
+Date: 2021-07-27 (last change).
 
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991
 
