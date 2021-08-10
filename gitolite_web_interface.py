@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2021-05-11, 2021-06-08, 2021-06-09, 2021-07-27 (last change).
+Date: 2021-05-11, 2021-06-08, 2021-06-09, 2021-07-27, 2021-08-10 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -119,6 +119,8 @@ def gitolite_web_interface(
         gitolite_home='/srv/gitolite',
         gitolite_admin_repo='repositories/gitolite-admin.git',
         provided_options=None):
+    # pylint: disable=too-many-arguments,too-many-locals
+    # pylint: disable=too-many-branches,too-many-statements
     if provided_options is None:
         provided_options = {'help': True, 'info': True, 'mngkey': True,
                             'createrepo': True}
@@ -306,6 +308,7 @@ def gitolite_web_interface(
                     shell=True, timeout=3, check=True, env=new_env)
                 groups = cpi.stdout.splitlines()
                 names = set()
+                # pylint: disable=consider-using-enumerate
                 for i in range(len(groups)):
                     groups[i] = groups[i][1:]
                     access, username = groups[i].split(b'_', maxsplit=1)
@@ -358,6 +361,7 @@ def gitolite_web_interface(
                     shell=True, timeout=3, check=True, env=new_env)
                 groups = cpi.stdout.splitlines()
                 names = set()
+                # pylint: disable=consider-using-enumerate
                 for i in range(len(groups)):
                     groups[i] = groups[i][1:]
                     access, username = groups[i].split(b'_', maxsplit=1)

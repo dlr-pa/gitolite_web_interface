@@ -1,4 +1,4 @@
-name: pep8_check
+name: coding_check
 
 on:
   push:
@@ -19,3 +19,13 @@ jobs:
     - name: run pylint (only output; skipping error)
       run: pylint -j 3 --include-naming-hint=y --good-names=i,j,k,fd $(find -name "*.py")
       continue-on-error: true
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      # https://github.com/marketplace/actions/checkout
+    - uses: actions/setup-python@v2
+      # https://github.com/marketplace/actions/setup-python
+    - uses: pre-commit/action@v2.0.3
+      # https://github.com/pre-commit/action
