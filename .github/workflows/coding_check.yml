@@ -16,9 +16,8 @@ jobs:
       run: sudo apt install pep8 pylint3
     - name: check PEP 8 code style
       run: pep8 --show-source --show-pep8 --statistics $(find -name "*.py")
-    - name: run pylint (only output; skipping error)
+    - name: run pylint
       run: pylint -j 3 --include-naming-hint=y --good-names=i,j,k,fd $(find -name "*.py")
-      continue-on-error: true
 
   pre-commit:
     runs-on: ubuntu-latest
