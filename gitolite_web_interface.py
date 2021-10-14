@@ -309,7 +309,7 @@ def gitolite_web_interface(
                 groups = cpi.stdout.splitlines()
                 names = set()
                 for i, group in enumerate(groups):
-                    groups[i] = groups[i][1:]
+                    groups[i] = group[1:]
                     access, username = groups[i].split(b'_', maxsplit=1)
                     if access == b'owner':
                         names.add(username)
@@ -361,7 +361,7 @@ def gitolite_web_interface(
                 groups = cpi.stdout.splitlines()
                 names = set()
                 for i, group in enumerate(groups):
-                    groups[i] = groups[i][1:]
+                    groups[i] = group[1:]
                     access, username = groups[i].split(b'_', maxsplit=1)
                     if access == b'owner':
                         names.add(username)
