@@ -41,6 +41,7 @@ You can also overide the CONFIG variable.
 
 import cgi
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -418,7 +419,9 @@ def gitolite_web_interface(
                     for line in gitolite_config:
                         if line.startswith(repo_group):
                             repo_group_def_index = iterartion
-                            if repo_path in line:
+                            if bool(re.findall(
+                                    r'^%s = %s$' % (repo_group, repo_path),
+                                    line)):
                                 repo_group_def = True
                         elif (line.startswith('repo ') and
                               (repo_group in line)):
@@ -429,7 +432,7 @@ def gitolite_web_interface(
                     if not repo_group_def:
                         repo_group_def_str = repo_group + ' = ' + repo_path
                         if repo_group_def_index is not None:
-                            gitolite_config.insert(repo_group_def_index,
+                            gitolite_config.insert(1 + repo_group_def_index,
                                                    repo_group_def_str)
                         else:
                             gitolite_config.append('')
@@ -456,7 +459,7 @@ def gitolite_web_interface(
                     #    content += '\n'.join(gitolite_config)
                     #    content += '</pre>'
                     with open(conf_path, 'w') as fd:
-                        fd.write('\n'.join(gitolite_config))
+                        fd.write('\n'.join(gitolite_config) + '\n')
                     git_cmd = 'git add conf/gitolite.conf'
                     cpi = subprocess.run(
                         git_cmd,
