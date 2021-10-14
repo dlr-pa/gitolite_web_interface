@@ -421,7 +421,7 @@ def gitolite_web_interface(
                             repo_group_def_index = iterartion
                             if bool(re.findall(
                                 r'^%s = %s$' % (repo_group, repo_path),
-                                line)):
+                                    line)):
                                 repo_group_def = True
                         elif (line.startswith('repo ') and
                               (repo_group in line)):
