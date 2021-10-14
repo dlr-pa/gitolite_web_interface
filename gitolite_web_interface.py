@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2021-05-11, 2021-06-08, 2021-06-09, 2021-07-27, 2021-08-10 (last change).
+Date: 2021-10-14 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -308,9 +308,8 @@ def gitolite_web_interface(
                     shell=True, timeout=3, check=True, env=new_env)
                 groups = cpi.stdout.splitlines()
                 names = set()
-                # pylint: disable=consider-using-enumerate
-                for i in range(len(groups)):
-                    groups[i] = groups[i][1:]
+                for i, group in enumerate(groups):
+                    groups[i] = group[1:]
                     access, username = groups[i].split(b'_', maxsplit=1)
                     if access == b'owner':
                         names.add(username)
@@ -361,9 +360,8 @@ def gitolite_web_interface(
                     shell=True, timeout=3, check=True, env=new_env)
                 groups = cpi.stdout.splitlines()
                 names = set()
-                # pylint: disable=consider-using-enumerate
-                for i in range(len(groups)):
-                    groups[i] = groups[i][1:]
+                for i, group in enumerate(groups):
+                    groups[i] = group[1:]
                     access, username = groups[i].split(b'_', maxsplit=1)
                     if access == b'owner':
                         names.add(username)
