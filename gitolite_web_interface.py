@@ -298,7 +298,7 @@ def gitolite_web_interface(
             # accessible by these groups.
             if ((os.environ['QUERY_STRING'] in ['createrepo']) and
                     provided_options['createrepo']):
-                content = '<h1>create repositoy</h1>\n'
+                content = '<h1>create repository</h1>\n'
                 content += '<h2>Your current groups are:</h2>\n'
                 new_env = os.environ.copy()
                 new_env["HOME"] = gitolite_home
