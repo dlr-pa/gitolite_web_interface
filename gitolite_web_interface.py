@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2021-10-14 (last change).
+Date: 2022-02-09 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -73,7 +73,7 @@ CONFIG = {
         'mngkey': True,
         'createrepo': False}
 }
-# special setting:
+# start special setting
 CONFIG['gitolite_wrapper_script'] = \
     '/srv/www/bin/gitolite-suexec-wrapper.sh'
 CONFIG['ssh_gitolite_user'] = 'git'
@@ -82,6 +82,7 @@ CONFIG['provided_options'] = {
     'info': True,
     'mngkey': True,
     'createrepo': True}
+# end special setting
 
 # pylint: disable=missing-docstring
 
