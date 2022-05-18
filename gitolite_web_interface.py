@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2022-02-09 (last change).
+Date: 2022-05-18 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -71,6 +71,7 @@ CONFIG = {
         'help': True,
         'info': True,
         'mngkey': True,
+        'creategroup': False,
         'createrepo': False}
 }
 # start special setting
@@ -81,6 +82,20 @@ CONFIG['provided_options'] = {
     'help': True,
     'info': True,
     'mngkey': True,
+    'creategroup': True,
+    'createrepo': True}
+# end special setting
+
+# start special setting
+CONFIG['gitolite_wrapper_script'] = \
+    '/var/www/bin/gitolite-suexec-wrapper.sh'
+CONFIG['ssh_gitolite_user'] = 'git'
+CONFIG['gitolite_home'] = '/data/gitolite'
+CONFIG['provided_options'] = {
+    'help': True,
+    'info': True,
+    'mngkey': True,
+    'creategroup': True,
     'createrepo': True}
 # end special setting
 
@@ -100,7 +115,11 @@ def output(title='test page', content='<h1>test</h1>'):
     print('<body>')
     print(content)
     print('<hr>')
-    print('<p align="right"><a href="' + os.environ['SCRIPT_NAME'] +
+    try:
+        script_name = os.environ['SCRIPT_NAME']
+    except KeyError:
+        script_name = '???'
+    print('<p align="right"><a href="' + script_name +
           '">back to start</a></p>')
     print('</body>')
     print('</html>')
@@ -125,7 +144,7 @@ def gitolite_web_interface(
     # pylint: disable=too-many-branches,too-many-statements
     if provided_options is None:
         provided_options = {'help': True, 'info': True, 'mngkey': True,
-                            'createrepo': True}
+                            'creategroup': True, 'createrepo': True}
     # run only with https
     if (only_https and (('HTTPS' not in os.environ) or
                         (os.environ['HTTPS'] != 'on'))):
@@ -156,10 +175,22 @@ def gitolite_web_interface(
             (bool(os.environ['QUERY_STRING']))):
         if ((os.environ['QUERY_STRING'] in ['help', 'info']) and
                 (provided_options[os.environ['QUERY_STRING']])):
+            #cpi = subprocess.run(
+            #    [gitolite_wrapper_script],
+            #    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            #    shell=True, timeout=3, check=True)
             cpi = subprocess.run(
                 [gitolite_wrapper_script],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                shell=True, timeout=3, check=True)
+                shell=True, timeout=3, check=False)
+            if cpi.returncode:
+                content = 'returncode = %i\n' % cpi.returncode
+                content += 'stdout:\n'
+                content += cpi.stdout.decode()
+                content += 'stderr:\n'
+                content += cpi.stderr.decode()
+                output(content=content, title='error')
+                sys.exit(0)
             content = '<h1>gitolite command (' + \
                 os.environ['QUERY_STRING'] + ')</h1>\n'
             content += '<h2>Output:</h2>'
@@ -276,6 +307,150 @@ def gitolite_web_interface(
             title = os.environ['QUERY_STRING'].replace('%20', ' ')
             output(content=content, title=title)
             sys.exit(0)
+        elif (os.environ['QUERY_STRING'].startswith('creategroup') and
+              provided_options['creategroup']):
+            # create a group for users in gitolite
+            # group names are like [access]_[name]
+            # [access] defines the possibilities:
+            #   owner: Can create repositories in the directory [name].
+            #          (And get the permission RW+ in gitolite.)
+            #   writer: Can read and write repositories
+            #           in the directory [name].
+            #           (This is the permission RW in gitolite.)
+            #   reader: Can read repositories in the directory [name].
+            #           (This is the permission R in gitolite.)
+            # We will only create groups in gitolite, which are not empty.
+            if ((os.environ['QUERY_STRING'] in ['creategroup']) and
+                    provided_options['creategroup']):
+                content = '<h1>create group</h1>\n'
+                content += '<h2>Your current groups are:</h2>\n'
+                new_env = os.environ.copy()
+                new_env["HOME"] = gitolite_home
+                my_cmd = gitolite_cmd + ' list-memberships -u ' + user
+                cpi = subprocess.run(
+                    my_cmd,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    shell=True, timeout=3, check=True, env=new_env)
+                groups = cpi.stdout.splitlines()
+                names = set()
+                for i, group in enumerate(groups):
+                    groups[i] = group[1:]
+                    access, username = groups[i].split(b'_', maxsplit=1)
+                    if access == b'owner':
+                        names.add(username)
+                content += '<pre>' + cpi.stdout.decode() + '</pre>\n'
+                content += '<h2>You can create subgroups in:</h2>\n'
+                content += '<pre>' + b','.join(names).decode() + '</pre>\n'
+                content += '<h2>New group:</h2>\n'
+                content += '<p>The repository path on the server will be: '
+                content += '[group/project directory] + "/" + [repository name]</p>'
+                dav_users_path = os.path.join(gitolite_home, 'dav_users')
+                if os.path.exists(dav_users_path):
+                    with open(dav_users_path, 'r') as f:
+                        all_users = [x.strip() for x in f.readlines()]
+                    content += '\n\n<pre>' + ','.join(all_users) + '</pre>\n\n'
+                # create form
+                content += '<p>'
+                content += '<form method="POST" action="' + \
+                    os.environ.get('SCRIPT_NAME') + '?creategroup1">'
+                
+                content += '<table>'
+                content += '<tr>'
+                content += '<td>group/project directory: </td>'
+                content += '<td>'
+                content += '<select name="project" size="1">'
+                content += '<option></option>'
+                for username in names:
+                    content += '<option>' + username.decode() + '</option>'
+                content += '</select>'
+                content += '</td>'
+                content += '</tr><tr>'
+                content += '<td>group name: </td>'
+                content += '<td><input type="text" name="name" size="42" placeholder="group name in the group/project directory as (sub)group"></td>'
+                content += '</tr><tr>'
+                content += '</table>'
+
+                content += '\n\n<table>'
+                content += '<tr>'
+                content += '<td>select owners: </td>'
+                content += '<td>'
+                content += '<fieldset>'
+                for otheruser in all_users:
+                    if user == otheruser:
+                        content += '<input type="checkbox" name="owner" value="%s" id="%s" checked readonly>' % (otheruser, otheruser)
+                    else:
+                        content += '<input type="checkbox" name="owner" value="%s" id="%s">' % (otheruser, otheruser)
+                    content += '<label for="%s">%s</label>' % (otheruser, otheruser)
+                content += '</fieldset>'
+                content += '</td>'
+                content += '</tr>'
+                content += '</table>\n\n'
+
+                content += '<input type="submit" value="submit"> '
+                content += '<input type="reset" value="reset">'
+                content += '</p>'
+                output(title='create group', content=content)
+                sys.exit(0)
+            elif (os.environ['QUERY_STRING'] == 'creategroup1' and
+                  provided_options['creategroup']):
+                output(title='to be done', content='tbd')
+                sys.exit(0)
+                form = cgi.FieldStorage()
+                if 'name' not in form:
+                    content = '<h1>ERROR</h1>'
+                    content += '<pre>\n'
+                    content += str(form)
+                    content += '\n</pre>\n'
+                    content += '<h1>ERROR</h1>'
+                    content += '<p>no post data</p>'
+                    output(title='ERROR', content=content)
+                    sys.exit(0)
+                subgroup = True
+                if 'project' not in form:
+                    subgroup = False
+                new_env = os.environ.copy()
+                new_env["HOME"] = gitolite_home
+                my_cmd = gitolite_cmd + ' list-memberships -u ' + user
+                cpi = subprocess.run(
+                    my_cmd,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    shell=True, timeout=3, check=True, env=new_env)
+                groups = cpi.stdout.splitlines()
+                names = set()
+                for i, group in enumerate(groups):
+                    groups[i] = group[1:]
+                    access, username = groups[i].split(b'_', maxsplit=1)
+                    if access == b'owner':
+                        names.add(username)
+                if (('project' in form) and
+                    (not form["project"].value.encode() in names)):
+                    content = '<p>You cannot create a group in this project "'
+                    content += form["project"].value.encode() + '".</p>'
+                    output(
+                        title='ERROR',
+                        content=content)
+                    sys.exit(0)
+                if ssh_host is None:
+                    ssh_host = os.environ['HTTP_HOST']
+                group_path = ''
+                if 'project' in form:
+                    group_path += form["project"].value + '/'
+                group_path += form["name"].value
+                content = '<h1>group "%s" created</h1>\n' % group_path
+                content += '<h2>config lines:</h2>\n'
+                content += '<pre>\n'
+                content += str(form)
+                content += '\n</pre>\n'
+                ownerlist = set([user])
+                if 'owner' in form:
+                    if isinstance(form['owner'], list):
+                        for owner in form['owner']:
+                            ownerlist.append(owner.value)
+                    else:
+                        ownerlist.add(form['owner'].value)
+                content += '<pre>' + ','.join(ownerlist) + '</pre>\n'
+                output(title='group created', content=content)
+                sys.exit(0)
         elif (os.environ['QUERY_STRING'].startswith('createrepo') and
               provided_options['createrepo']):
             # create a repository based on groups (assume users are in groups)
@@ -320,14 +495,15 @@ def gitolite_web_interface(
                 content += '<pre>' + b','.join(names).decode() + '</pre>\n'
                 content += '<h2>New repo:</h2>\n'
                 content += '<p>The repository path on the server will be: '
-                content += '[project directory] + "/" + [repository name]</p>'
+                content += '[group/project directory] + "/" + ' + \
+                    '[repository name]</p>'
                 # create form
                 content += '<p>'
                 content += '<form method="POST" action="' + \
                     os.environ.get('SCRIPT_NAME') + '?createrepo1">'
                 content += '<table>'
                 content += '<tr>'
-                content += '<td>project directory: </td>'
+                content += '<td>group/project directory: </td>'
                 content += '<td>'
                 content += '<select name="project" size="1">'
                 for username in names:
@@ -335,10 +511,9 @@ def gitolite_web_interface(
                 content += '</select>'
                 content += '</td>'
                 content += '</tr><tr>'
-                content += '<tr>'
                 content += '<td>repository name: </td>'
                 content += '<td><input type="text" name="name" size="42"></td>'
-                content += '</tr><tr>'
+                content += '</tr>'
                 content += '</table>'
                 content += '<input type="submit" value="submit"> '
                 content += '<input type="reset" value="reset">'
