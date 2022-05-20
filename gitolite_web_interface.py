@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Daniel Mohr.
-Date: 2022-05-18 (last change).
+Date: 2022-05-20 (last change).
 License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 
 [gitolite](https://gitolite.com/gitolite/) is a great tool to manage
@@ -66,6 +66,10 @@ CONFIG = {
     'gitolite_home': '/srv/gitolite',
     # define the gitolite admin repository path in the gitolite home
     'gitolite_admin_repo': 'repositories/gitolite-admin.git',
+    # define select format of users for creategroup
+    # you can choose between 'auto', 'checkbox' and 'select',
+    # 'auto' uses 'checkbox' for up to 5 users and 'select' otherwise:
+    'creategroup_format': 'auto',
     # define, which options should be provided:
     'provided_options': {
         'help': True,
@@ -102,7 +106,7 @@ CONFIG['provided_options'] = {
 # pylint: disable=missing-docstring
 
 
-def output(title='test page', content='<h1>test</h1>'):
+def output(title='test page', content='<h1>test</h1>', style=''):
     print('Content-type:text/html\n')
     print('<html>')
     print('<head>')
@@ -111,6 +115,8 @@ def output(title='test page', content='<h1>test</h1>'):
           'content="no-cache, no-store, must-revalidate"/>')
     print('<meta http-equiv="Pragma" content="no-cache"/>')
     print('<meta http-equiv="Expires" content="0"/>')
+    if style:
+        print(style)
     print('</head>')
     print('<body>')
     print(content)
@@ -131,6 +137,142 @@ def cmdlink(name, additionalinfo=''):
     return ret
 
 
+def clone_admin_repo(tmpdir, gitolite_home, gitolite_admin_repo, user):
+    new_env = os.environ.copy()
+    new_env["HOME"] = gitolite_home
+    admin_repo_name = os.path.splitext(
+        os.path.split(gitolite_admin_repo)[1])[0]
+    git_cmd = 'git clone ' + os.path.join(gitolite_home,
+                                          gitolite_admin_repo)
+    subprocess.run(
+        git_cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True, cwd=tmpdir, timeout=3, check=True,
+        env=new_env)
+    git_cmd = 'git config user.name "' + user + '"'
+    subprocess.run(
+        git_cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+        timeout=3, check=True, env=new_env)
+    git_cmd = 'git config user.email "' + user + '@'
+    git_cmd += os.environ.get('HTTP_HOST') + '"'
+    subprocess.run(
+        git_cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+        timeout=3, check=True, env=new_env)
+    conf_path = os.path.join(
+        tmpdir, admin_repo_name, 'conf/gitolite.conf')
+    with open(conf_path, 'r') as fd:
+        gitolite_config = fd.read().splitlines()
+    return (conf_path, gitolite_config)
+
+
+def commit_push_config_to_repo(
+        tmpdir, gitolite_home, gitolite_admin_repo, message='updated'):
+    content = ''
+    new_env = os.environ.copy()
+    new_env["HOME"] = gitolite_home
+    admin_repo_name = os.path.splitext(
+        os.path.split(gitolite_admin_repo)[1])[0]
+    git_cmd = 'git add conf/gitolite.conf'
+    cpi = subprocess.run(
+        git_cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+        timeout=3, check=True, env=new_env)
+    if DEBUG:
+        content += '<h3>debug</h3>'
+        content += '<pre>'
+        content += git_cmd
+        content += '</pre>'
+        content += '<pre>'
+        content += cpi.stdout.decode()
+        content += '</pre>'
+    git_cmd = 'git commit -m "' + message + '"'
+    cpi = subprocess.run(
+        git_cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+        timeout=3, check=True, env=new_env)
+    if DEBUG:
+        content += '<h3>debug</h3>'
+        content += '<pre>'
+        content += git_cmd
+        content += '</pre>'
+        content += '<pre>'
+        content += cpi.stdout.decode()
+        content += '</pre>'
+    git_cmd = 'git push'
+    git_cmd = 'pwd;ls;cat .git/config;git push'
+    git_cmd = 'gitolite push'
+    cpi = subprocess.run(
+        git_cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
+        timeout=3, check=False, env=new_env)
+    if DEBUG:
+        content += '<h3>debug</h3>'
+        content += '<pre>'
+        content += git_cmd
+        content += '</pre>'
+        content += '<pre>'
+        content += cpi.stdout.decode()
+        content += '</pre>'
+        content += '<pre>'
+        content += cpi.stderr.decode()
+        content += '</pre>'
+    return content
+
+def generate_form_checkbox(all_users, user, key):
+    content = ''
+    content += '<fieldset>'
+    for otheruser in all_users:
+        if user == otheruser:
+            content += '<input type="checkbox" name="%s" value="%s" id="%s" checked>' % (
+                key, otheruser, otheruser)
+        else:
+            content += '<input type="checkbox" name="%s" value="%s" id="%s">' % (
+                key, otheruser, otheruser)
+        content += '<label for="%s">%s</label></br>' % (otheruser, otheruser)
+    content += '</fieldset>'
+    return content
+
+
+def generate_form_select(all_users, user, key):
+    content = ''
+    content += '<select name="%s" size="5" multiple>' % key
+    for otheruser in all_users:
+        if user == otheruser:
+            content += '<option selected>%s</option>' % (otheruser)
+        else:
+            content += '<option>%s</option>' % (otheruser)
+    content += '</select>'
+    return content
+
+
+def generate_form_select_list(creategroup_format, all_users, user, key):
+    if (((creategroup_format == 'auto') and (len(all_users) <= 5)) or
+            (creategroup_format == 'checkbox')):
+        return generate_form_checkbox(all_users, user, key)
+    # else:
+    return generate_form_select(all_users, user, key)
+
+
+def extract_set_from_form(form, key, default=tuple()):
+    data = set(default)
+    if key in form:
+        if isinstance(form[key], list):
+            for item in form[key]:
+                data.add(item.value)
+        else:
+            data.add(form[key].value)
+    data = list(data)
+    data.sort()
+    return data
+
+
 def gitolite_web_interface(
         gitolite_wrapper_script,
         ssh_gitolite_user,
@@ -139,7 +281,8 @@ def gitolite_web_interface(
         gitolite_cmd='gitolite',
         gitolite_home='/srv/gitolite',
         gitolite_admin_repo='repositories/gitolite-admin.git',
-        provided_options=None):
+        provided_options=None,
+        creategroup_format='auto'):
     # pylint: disable=too-many-arguments,too-many-locals
     # pylint: disable=too-many-branches,too-many-statements
     if provided_options is None:
@@ -175,7 +318,7 @@ def gitolite_web_interface(
             (bool(os.environ['QUERY_STRING']))):
         if ((os.environ['QUERY_STRING'] in ['help', 'info']) and
                 (provided_options[os.environ['QUERY_STRING']])):
-            #cpi = subprocess.run(
+            # cpi = subprocess.run(
             #    [gitolite_wrapper_script],
             #    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             #    shell=True, timeout=3, check=True)
@@ -338,22 +481,26 @@ def gitolite_web_interface(
                     access, username = groups[i].split(b'_', maxsplit=1)
                     if access == b'owner':
                         names.add(username)
+                names = list(names)
+                names.sort()
                 content += '<pre>' + cpi.stdout.decode() + '</pre>\n'
                 content += '<h2>You can create subgroups in:</h2>\n'
-                content += '<pre>' + b','.join(names).decode() + '</pre>\n'
+                content += '<pre>' + b'\n'.join(names).decode() + '</pre>\n'
                 content += '<h2>New group:</h2>\n'
                 content += '<p>The repository path on the server will be: '
-                content += '[group/project directory] + "/" + [repository name]</p>'
+                content += '[group/project directory] + "/" + ' + \
+                    '[repository name]</p>'
                 dav_users_path = os.path.join(gitolite_home, 'dav_users')
                 if os.path.exists(dav_users_path):
-                    with open(dav_users_path, 'r') as f:
-                        all_users = [x.strip() for x in f.readlines()]
-                    content += '\n\n<pre>' + ','.join(all_users) + '</pre>\n\n'
+                    with open(dav_users_path, 'r') as fd:
+                        all_users = (x.strip() for x in fd.readlines())
+                    # check for valid user names (at the moment very simple):
+                    all_users = list(filter(bool, all_users))
                 # create form
                 content += '<p>'
                 content += '<form method="POST" action="' + \
                     os.environ.get('SCRIPT_NAME') + '?creategroup1">'
-                
+                # group/project directory and name
                 content += '<table>'
                 content += '<tr>'
                 content += '<td>group/project directory: </td>'
@@ -366,35 +513,58 @@ def gitolite_web_interface(
                 content += '</td>'
                 content += '</tr><tr>'
                 content += '<td>group name: </td>'
-                content += '<td><input type="text" name="name" size="42" placeholder="group name in the group/project directory as (sub)group"></td>'
+                content += '<td><input type="text" name="name" size="42" ' + \
+                    'placeholder="group name in the group/project ' + \
+                    'directory as (sub)group"></td>'
                 content += '</tr><tr>'
-                content += '</table>'
-
-                content += '\n\n<table>'
+                content += '</table>\n'
+                content += '<h3>Select members:</h3>\n'
+                content += '<p>'
+                content += 'You are always an owner.'
+                if ((creategroup_format == 'select') or
+                        ((creategroup_format == 'auto') and
+                         (len(all_users) > 5))):
+                    content += ' You can select many ones by pressing [Ctrl]. '
+                    content += 'Or you can select a block by pressing [Shift].'
+                content += '</p>'
+                # select owners:
+                content += '<table>'
                 content += '<tr>'
                 content += '<td>select owners: </td>'
                 content += '<td>'
-                content += '<fieldset>'
-                for otheruser in all_users:
-                    if user == otheruser:
-                        content += '<input type="checkbox" name="owner" value="%s" id="%s" checked readonly>' % (otheruser, otheruser)
-                    else:
-                        content += '<input type="checkbox" name="owner" value="%s" id="%s">' % (otheruser, otheruser)
-                    content += '<label for="%s">%s</label>' % (otheruser, otheruser)
-                content += '</fieldset>'
+                content += generate_form_select_list(
+                    creategroup_format, all_users, user, key='owner')
                 content += '</td>'
-                content += '</tr>'
-                content += '</table>\n\n'
-
+                content += '</tr>\n'
+                # select writers:
+                content += '<tr>'
+                content += '<td>select writers:</td>'
+                content += '<td>'
+                content += generate_form_select_list(
+                    creategroup_format, all_users, '', key='writer')
+                content += '</td>'
+                content += '</tr>\n'
+                # select readers:
+                content += '<tr>'
+                content += '<td>select readers:</td>'
+                content += '<td>'
+                content += generate_form_select_list(
+                    creategroup_format, all_users, '', key='reader')
+                content += '</td>'
+                content += '</tr>\n'
+                content += '</table>\n'
+                # submit buttons
                 content += '<input type="submit" value="submit"> '
                 content += '<input type="reset" value="reset">'
                 content += '</p>'
-                output(title='create group', content=content)
+                output(title='create group',
+                       content=content,
+                       style='<style>td {vertical-align:top;}</style>')
                 sys.exit(0)
             elif (os.environ['QUERY_STRING'] == 'creategroup1' and
                   provided_options['creategroup']):
-                output(title='to be done', content='tbd')
-                sys.exit(0)
+                #output(title='to be done', content='tbd')
+                # sys.exit(0)
                 form = cgi.FieldStorage()
                 if 'name' not in form:
                     content = '<h1>ERROR</h1>'
@@ -405,9 +575,10 @@ def gitolite_web_interface(
                     content += '<p>no post data</p>'
                     output(title='ERROR', content=content)
                     sys.exit(0)
-                subgroup = True
-                if 'project' not in form:
-                    subgroup = False
+                newgroup = ''
+                if 'project' in form:
+                    newgroup += form["project"].value + '/'
+                newgroup += form["name"].value
                 new_env = os.environ.copy()
                 new_env["HOME"] = gitolite_home
                 my_cmd = gitolite_cmd + ' list-memberships -u ' + user
@@ -423,32 +594,70 @@ def gitolite_web_interface(
                     if access == b'owner':
                         names.add(username)
                 if (('project' in form) and
-                    (not form["project"].value.encode() in names)):
+                        (not form["project"].value.encode() in names)):
                     content = '<p>You cannot create a group in this project "'
                     content += form["project"].value.encode() + '".</p>'
                     output(
                         title='ERROR',
                         content=content)
                     sys.exit(0)
+                new_env = os.environ.copy()
+                new_env["HOME"] = gitolite_home
+                my_cmd = gitolite_cmd + ' list-groups'
+                cpi = subprocess.run(
+                    my_cmd,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    shell=True, timeout=3, check=True, env=new_env)
+                groups = cpi.stdout.splitlines()
+                group_exists = False
+                for kind in ['owner', 'writer', 'reader']:
+                    kindnewgroup = '@' + kind + '_' + newgroup
+                    if kindnewgroup.encode() in groups:
+                        group_exists = True
+                        break
+                if group_exists:
+                    content = '<p>group "'
+                    content += newgroup + '" '
+                    content += 'exists already. You cannot create it.</p>'
+                    output(
+                        title='ERROR',
+                        content=content)
+                    sys.exit(0)
                 if ssh_host is None:
                     ssh_host = os.environ['HTTP_HOST']
-                group_path = ''
-                if 'project' in form:
-                    group_path += form["project"].value + '/'
-                group_path += form["name"].value
-                content = '<h1>group "%s" created</h1>\n' % group_path
+                content = '<h1>group "%s" created</h1>\n' % newgroup
+                ownerlist = extract_set_from_form(
+                    form, key='owner', default=[user])
+                writerlist = extract_set_from_form(
+                    form, key='writer')
+                readerlist = extract_set_from_form(
+                    form, key='reader')
                 content += '<h2>config lines:</h2>\n'
                 content += '<pre>\n'
-                content += str(form)
-                content += '\n</pre>\n'
-                ownerlist = set([user])
-                if 'owner' in form:
-                    if isinstance(form['owner'], list):
-                        for owner in form['owner']:
-                            ownerlist.append(owner.value)
-                    else:
-                        ownerlist.add(form['owner'].value)
-                content += '<pre>' + ','.join(ownerlist) + '</pre>\n'
+                group_def_str = ''
+                if ownerlist:
+                    group_def_str += '@owner_' + newgroup + ' = '
+                    group_def_str += ' '.join(ownerlist) + '\n'
+                if writerlist:
+                    group_def_str += '@writer_' + newgroup + ' = '
+                    group_def_str += ' '.join(writerlist) + '\n'
+                if readerlist:
+                    group_def_str += '@reader_' + newgroup + ' = '
+                    group_def_str += ' '.join(readerlist) + '\n'
+                content += group_def_str
+                content += '</pre>\n'
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    (conf_path, gitolite_config) = clone_admin_repo(
+                        tmpdir,
+                        gitolite_home, gitolite_admin_repo, user)
+                    gitolite_config.append('')
+                    gitolite_config.append(group_def_str)
+                    with open(conf_path, 'w') as fd:
+                        fd.write('\n'.join(gitolite_config) + '\n')
+                    content += commit_push_config_to_repo(
+                        tmpdir,
+                        gitolite_home, gitolite_admin_repo,
+                        message='added group ' + newgroup)
                 output(title='group created', content=content)
                 sys.exit(0)
         elif (os.environ['QUERY_STRING'].startswith('createrepo') and
@@ -490,6 +699,8 @@ def gitolite_web_interface(
                     access, username = groups[i].split(b'_', maxsplit=1)
                     if access == b'owner':
                         names.add(username)
+                names = list(names)
+                names.sort()
                 content += '<pre>' + cpi.stdout.decode() + '</pre>\n'
                 content += '<h2>You can create repositories for:</h2>\n'
                 content += '<pre>' + b','.join(names).decode() + '</pre>\n'
@@ -562,32 +773,9 @@ def gitolite_web_interface(
                 content += '    R = @reader_' + form["project"].value + '\n'
                 content += '</pre>\n'
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    git_cmd = 'git clone ' + os.path.join(gitolite_home,
-                                                          gitolite_admin_repo)
-                    admin_repo_name = os.path.splitext(
-                        os.path.split(gitolite_admin_repo)[1])[0]
-                    subprocess.run(
-                        git_cmd,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        shell=True, cwd=tmpdir, timeout=3, check=True,
-                        env=new_env)
-                    git_cmd = 'git config user.name "' + user + '"'
-                    subprocess.run(
-                        git_cmd,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
-                        timeout=3, check=True, env=new_env)
-                    git_cmd = 'git config user.email "' + user + '@'
-                    git_cmd += os.environ.get('HTTP_HOST') + '"'
-                    subprocess.run(
-                        git_cmd,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
-                        timeout=3, check=True, env=new_env)
-                    conf_path = os.path.join(
-                        tmpdir, admin_repo_name, 'conf/gitolite.conf')
-                    with open(conf_path, 'r') as fd:
-                        gitolite_config = fd.read().splitlines()
+                    (conf_path, gitolite_config) = clone_admin_repo(
+                        tmpdir,
+                        gitolite_home, gitolite_admin_repo, user)
                     repo_group_def = False
                     repo_group_def_index = None
                     repo_def = False
@@ -636,53 +824,10 @@ def gitolite_web_interface(
                     #    content += '</pre>'
                     with open(conf_path, 'w') as fd:
                         fd.write('\n'.join(gitolite_config) + '\n')
-                    git_cmd = 'git add conf/gitolite.conf'
-                    cpi = subprocess.run(
-                        git_cmd,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
-                        timeout=3, check=True, env=new_env)
-                    if DEBUG:
-                        content += '<h3>debug</h3>'
-                        content += '<pre>'
-                        content += git_cmd
-                        content += '</pre>'
-                        content += '<pre>'
-                        content += cpi.stdout.decode()
-                        content += '</pre>'
-                    git_cmd = 'git commit -m "added repo ' + repo_path + '"'
-                    cpi = subprocess.run(
-                        git_cmd,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
-                        timeout=3, check=True, env=new_env)
-                    if DEBUG:
-                        content += '<h3>debug</h3>'
-                        content += '<pre>'
-                        content += git_cmd
-                        content += '</pre>'
-                        content += '<pre>'
-                        content += cpi.stdout.decode()
-                        content += '</pre>'
-                    git_cmd = 'git push'
-                    git_cmd = 'pwd;ls;cat .git/config;git push'
-                    git_cmd = 'gitolite push'
-                    cpi = subprocess.run(
-                        git_cmd,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        shell=True, cwd=os.path.join(tmpdir, admin_repo_name),
-                        timeout=3, check=False, env=new_env)
-                    if DEBUG:
-                        content += '<h3>debug</h3>'
-                        content += '<pre>'
-                        content += git_cmd
-                        content += '</pre>'
-                        content += '<pre>'
-                        content += cpi.stdout.decode()
-                        content += '</pre>'
-                        content += '<pre>'
-                        content += cpi.stderr.decode()
-                        content += '</pre>'
+                    content += commit_push_config_to_repo(
+                        tmpdir,
+                        gitolite_home, gitolite_admin_repo,
+                        message='added repo ' + repo_path)
                 content += '<h2>Repository access:</h2>\n'
                 content += '<ul>'
                 content += '<li><pre>git clone git+ssh://'
@@ -722,4 +867,5 @@ if __name__ == "__main__":
         gitolite_cmd=CONFIG['gitolite_cmd'],
         gitolite_home=CONFIG['gitolite_home'],
         gitolite_admin_repo=CONFIG['gitolite_admin_repo'],
-        provided_options=CONFIG['provided_options'])
+        provided_options=CONFIG['provided_options'],
+        creategroup_format=CONFIG['creategroup_format'])
