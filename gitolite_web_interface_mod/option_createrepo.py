@@ -18,12 +18,12 @@ from .get_groups_from_gitolite import get_own_groups_from_gitolite
 
 def _option_createrepo(gitolite_cmd, gitolite_home):
     content = '<h1>create repository</h1>\n'
-    content += '<h2>Your current groups are:</h2>\n'
-    own_groups, gitolite_stdout = get_own_groups_from_gitolite(
+    #content += '<h2>Your current groups are:</h2>\n'
+    own_groups, _ = get_own_groups_from_gitolite(
         gitolite_cmd, gitolite_home)
     own_groups = list(own_groups)
     own_groups.sort()
-    content += '<pre>' + gitolite_stdout.decode() + '</pre>\n'
+    #content += '<pre>' + gitolite_stdout.decode() + '</pre>\n'
     content += '<h2>You can create repositories for:</h2>\n'
     content += '<pre>' + b','.join(own_groups).decode() + '</pre>\n'
     content += '<h2>New repo:</h2>\n'

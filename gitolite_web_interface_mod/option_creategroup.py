@@ -5,28 +5,19 @@
 
 import cgi
 import os
-import subprocess
 import sys
 import tempfile
 
 from .output import output
 from .myform import generate_form_select_list, extract_set_from_form
 from .clone_push_repo import clone_admin_repo, commit_push_config_to_repo
-from .get_groups_from_gitolite import get_own_groups_from_gitolite
+from .get_groups_from_gitolite import get_groups_from_gitolite
 
 # pylint: disable=missing-docstring
 
 
-def _option_creategroup(gitolite_cmd, gitolite_home, creategroup_format):
+def _option_creategroup(gitolite_home, creategroup_format):
     content = '<h1>create group</h1>\n'
-    content += '<h2>Your current groups are:</h2>\n'
-    own_groups, gitolite_stdout = get_own_groups_from_gitolite(
-        gitolite_cmd, gitolite_home)
-    own_groups = list(own_groups)
-    own_groups.sort()
-    content += '<pre>' + gitolite_stdout.decode() + '</pre>\n'
-    content += '<h2>You can create subgroups in:</h2>\n'
-    content += '<pre>' + b'\n'.join(own_groups).decode() + '</pre>\n'
     content += '<h2>New group:</h2>\n'
     content += '<p>The repository path on the server will be: '
     content += '[group/project directory] + "/" + ' + \
@@ -43,20 +34,9 @@ def _option_creategroup(gitolite_cmd, gitolite_home, creategroup_format):
         os.environ.get('SCRIPT_NAME') + '?creategroup1">'
     # group/project directory and name
     content += '<table>'
-    content += '<tr>'
-    content += '<td>group/project directory: </td>'
-    content += '<td>'
-    content += '<select name="project" size="1">'
-    content += '<option></option>'
-    for groupname in own_groups:
-        content += '<option>' + groupname.decode() + '</option>'
-    content += '</select>'
-    content += '</td>'
-    content += '</tr><tr>'
-    content += '<td>group name: </td>'
+    content += '<td>group/project name: </td>'
     content += '<td><input type="text" name="name" size="42" ' + \
-        'placeholder="group name in the group/project ' + \
-        'directory as (sub)group"></td>'
+        'placeholder="type your new group/project name"></td>'
     content += '</tr><tr>'
     content += '</table>\n'
     content += '<h3>Select members:</h3>\n'
@@ -105,9 +85,8 @@ def _option_creategroup(gitolite_cmd, gitolite_home, creategroup_format):
         style='<style>td {vertical-align:top;}</style>')
     sys.exit(0)
 
-def _option_creategroup1(
-        ssh_host, gitolite_cmd, gitolite_home, gitolite_admin_repo):
-    form = cgi.FieldStorage()
+
+def _option_creategroup1_check(gitolite_cmd, gitolite_home, form):
     if 'name' not in form:
         content = '<h1>ERROR</h1>'
         content += '<pre>\n'
@@ -118,45 +97,30 @@ def _option_creategroup1(
         output(
             title='ERROR', content=content)
         sys.exit(0)
-    newgroup = ''
-    if 'project' in form:
-        newgroup += form["project"].value + '/'
-    newgroup += form["name"].value
-    own_groups, _ = get_own_groups_from_gitolite(
-        gitolite_cmd, gitolite_home)
-    if (('project' in form) and
-            (not form["project"].value.encode() in own_groups)):
-        content = '<p>You cannot create a group in this project "'
-        content += form["project"].value.encode() + '".</p>'
-        output(
-            title='ERROR',
-            content=content)
-        sys.exit(0)
-    new_env = os.environ.copy()
-    new_env["HOME"] = gitolite_home
-    my_cmd = gitolite_cmd + ' list-groups'
-    cpi = subprocess.run(
-        my_cmd,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        shell=True, timeout=3, check=True, env=new_env)
-    groups = cpi.stdout.splitlines()
+    groups = get_groups_from_gitolite(gitolite_cmd, gitolite_home)
     group_exists = False
     for kind in ['owner', 'writer', 'reader']:
-        kindnewgroup = '@' + kind + '_' + newgroup
+        kindnewgroup = '@' + kind + '_' + form["name"].value
         if kindnewgroup.encode() in groups:
             group_exists = True
             break
     if group_exists:
         content = '<p>group "'
-        content += newgroup + '" '
+        content += form["name"].value + '" '
         content += 'exists already. You cannot create it.</p>'
         output(
             title='ERROR',
             content=content)
         sys.exit(0)
+
+
+def _option_creategroup1(
+        ssh_host, gitolite_cmd, gitolite_home, gitolite_admin_repo):
+    form = cgi.FieldStorage()
+    _option_creategroup1_check(gitolite_cmd, gitolite_home, form)
     if ssh_host is None:
         ssh_host = os.environ['HTTP_HOST']
-    content = '<h1>group "%s" created</h1>\n' % newgroup
+    content = '<h1>group "%s" created</h1>\n' % form["name"].value
     ownerlist = extract_set_from_form(
         form, key='owner', default=[os.environ.get('REMOTE_USER')])
     writerlist = extract_set_from_form(
@@ -167,13 +131,13 @@ def _option_creategroup1(
     content += '<pre>\n'
     group_def_str = ''
     if ownerlist:
-        group_def_str += '@owner_' + newgroup + ' = '
+        group_def_str += '@owner_' + form["name"].value + ' = '
         group_def_str += ' '.join(ownerlist) + '\n'
     if writerlist:
-        group_def_str += '@writer_' + newgroup + ' = '
+        group_def_str += '@writer_' + form["name"].value + ' = '
         group_def_str += ' '.join(writerlist) + '\n'
     if readerlist:
-        group_def_str += '@reader_' + newgroup + ' = '
+        group_def_str += '@reader_' + form["name"].value + ' = '
         group_def_str += ' '.join(readerlist) + '\n'
     content += group_def_str
     content += '</pre>\n'
@@ -191,7 +155,7 @@ def _option_creategroup1(
             commit_push_config_to_repo(
                 tmpdir,
                 gitolite_home, gitolite_admin_repo,
-                message='added group ' + newgroup)
+                message='added group ' + form["name"].value)
     output(
         title='group created', content=content)
     sys.exit(0)
@@ -215,7 +179,7 @@ def option_creategroup(
         # We will only create groups in gitolite, which are not empty.
         if os.environ['QUERY_STRING'] in ['creategroup']:
             _option_creategroup(
-                gitolite_cmd, gitolite_home, creategroup_format)
+                gitolite_home, creategroup_format)
             # sys.exit(0)
         elif os.environ['QUERY_STRING'] == 'creategroup1':
             _option_creategroup1(
