@@ -33,10 +33,20 @@ variable CONFIG:
   * ssh_gitolite_user
   * ssh_host
   * only_https
-
-Further there is an option to let the user create repositories (no wild repo).
+  * gitolite_cmd
+  * gitolite_home
+  * gitolite_admin_repo
+  * creategroup_format
+  * provided_options with:
+    * help
+	* info
+	* mngkey
+	* creategroup
+	* createrepo
 
 You can also overide the CONFIG variable.
+
+More information: https://github.com/dlr-pa/gitolite_web_interface
 """
 
 import gitolite_web_interface_mod
@@ -79,20 +89,7 @@ CONFIG['provided_options'] = {
     'help': True,
     'info': True,
     'mngkey': True,
-    'creategroup': True,
-    'createrepo': True}
-# end special setting
-
-# start special setting
-CONFIG['gitolite_wrapper_script'] = \
-    '/var/www/bin/gitolite-suexec-wrapper.sh'
-CONFIG['ssh_gitolite_user'] = 'git'
-CONFIG['gitolite_home'] = '/data/gitolite'
-CONFIG['provided_options'] = {
-    'help': True,
-    'info': True,
-    'mngkey': True,
-    'creategroup': True,
+    'creategroup': False,
     'createrepo': True}
 # end special setting
 
