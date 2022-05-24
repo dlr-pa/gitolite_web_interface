@@ -11,10 +11,12 @@ def _generate_form_checkbox(all_users, user, key):
     content += '<fieldset>'
     for otheruser in all_users:
         if user == otheruser:
-            content += '<input type="checkbox" name="%s" value="%s" id="%s" checked>' % (
+            content += '<input type="checkbox" '
+            content += 'name="%s" value="%s" id="%s" checked>' % (
                 key, otheruser, otheruser)
         else:
-            content += '<input type="checkbox" name="%s" value="%s" id="%s">' % (
+            content += '<input type="checkbox" '
+            content += 'name="%s" value="%s" id="%s">' % (
                 key, otheruser, otheruser)
         content += '<label for="%s">%s</label></br>' % (otheruser, otheruser)
     content += '</fieldset>'
