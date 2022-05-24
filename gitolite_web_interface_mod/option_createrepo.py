@@ -123,8 +123,6 @@ def _option_createrepo1(
         gitolite_admin_repo):
     form = cgi.FieldStorage()
     if ('project' not in form) or ('name' not in form):
-            # output(
-            #    title='ERROR', content=str(form))
         output(
             title='ERROR', content='<p>no post data</p>')
         sys.exit(0)

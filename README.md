@@ -55,10 +55,10 @@ the global variable CONFIG:
 
 Store the script in an adequate directory with necessary permissions, e. g.:
 
-    install --group=git --mode=0700 --owner=git --preserve-timestamps \ 
+    install --group=git --mode=0700 --owner=git --preserve-timestamps \
       --target-directory=/var/www/bin/ gitolite_web_interface.py
 
-    install --group=git --mode=0600 --owner=git --preserve-timestamps \ 
+    install --group=git --mode=0600 --owner=git --preserve-timestamps \
       --target-directory=/var/www/bin/gitolite_web_interface_mod/ \
 	  gitolite_web_interface_mod/*.py
 
