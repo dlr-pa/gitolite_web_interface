@@ -11,6 +11,10 @@ import tempfile
 
 from .output import output
 from .myform import generate_form_select_list, extract_set_from_form
+from .clone_push_repo import clone_admin_repo, commit_push_config_to_repo
+
+# pylint: disable=missing-docstring
+
 
 def option_creategroup(
         ssh_host=None, gitolite_cmd='gitolite', gitolite_home='/srv/gitolite',
@@ -128,7 +132,7 @@ def option_creategroup(
                 style='<style>td {vertical-align:top;}</style>')
             sys.exit(0)
         elif os.environ['QUERY_STRING'] == 'creategroup1':
-            #output(
+            # output(
             #    title='to be done', content='tbd')
             # sys.exit(0)
             form = cgi.FieldStorage()
@@ -215,18 +219,18 @@ def option_creategroup(
             content += '</pre>\n'
             with tempfile.TemporaryDirectory() as tmpdir:
                 (conf_path, gitolite_config) = \
-                  gitolite_web_interface_mod.clone_admin_repo(
-                      tmpdir,
-                      gitolite_home, gitolite_admin_repo, user)
+                    clone_admin_repo(
+                        tmpdir,
+                        gitolite_home, gitolite_admin_repo, user)
                 gitolite_config.append('')
                 gitolite_config.append(group_def_str)
                 with open(conf_path, 'w') as fd:
                     fd.write('\n'.join(gitolite_config) + '\n')
                 content += \
-                  gitolite_web_interface_mod.commit_push_config_to_repo(
-                      tmpdir,
-                      gitolite_home, gitolite_admin_repo,
-                      message='added group ' + newgroup)
+                    commit_push_config_to_repo(
+                        tmpdir,
+                        gitolite_home, gitolite_admin_repo,
+                        message='added group ' + newgroup)
             output(
                 title='group created', content=content)
             sys.exit(0)

@@ -9,6 +9,9 @@ import sys
 
 from .output import output
 
+# pylint: disable=missing-docstring
+
+
 def option_help_info(gitolite_wrapper_script):
     cpi = subprocess.run(
         [gitolite_wrapper_script],

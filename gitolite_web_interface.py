@@ -41,8 +41,6 @@ You can also overide the CONFIG variable.
 
 import gitolite_web_interface_mod
 
-DEBUG = True
-
 CONFIG = {
     # define the script, which is called when using gitolite over http
     # as described in: https://gitolite.com/gitolite/contrib/ssh-and-http

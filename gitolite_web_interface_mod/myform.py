@@ -3,6 +3,9 @@
 :Date: 2022-05-24
 """
 
+# pylint: disable=missing-docstring
+
+
 def _generate_form_checkbox(all_users, user, key):
     content = ''
     content += '<fieldset>'

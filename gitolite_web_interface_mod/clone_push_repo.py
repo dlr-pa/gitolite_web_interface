@@ -6,6 +6,11 @@
 import os
 import subprocess
 
+DEBUG = True
+
+# pylint: disable=missing-docstring
+
+
 def clone_admin_repo(tmpdir, gitolite_home, gitolite_admin_repo, user):
     new_env = os.environ.copy()
     new_env["HOME"] = gitolite_home
@@ -36,7 +41,6 @@ def clone_admin_repo(tmpdir, gitolite_home, gitolite_admin_repo, user):
     with open(conf_path, 'r') as fd:
         gitolite_config = fd.read().splitlines()
     return (conf_path, gitolite_config)
-
 
 
 def commit_push_config_to_repo(

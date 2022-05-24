@@ -5,6 +5,9 @@
 
 import os
 
+# pylint: disable=missing-docstring
+
+
 def output(title='test page', content='<h1>test</h1>', style=''):
     print('Content-type:text/html\n')
     print('<html>')

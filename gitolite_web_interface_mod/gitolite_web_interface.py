@@ -14,6 +14,7 @@ from .option_createrepo import option_createrepo
 
 # pylint: disable=missing-docstring
 
+
 def cmdlink(name, additionalinfo=''):
     ret = '<li><a href="' + os.environ.get('SCRIPT_NAME') + '?'
     ret += name + '">' + name + '</a>' + additionalinfo + '</li>'
@@ -74,7 +75,8 @@ def gitolite_web_interface(
             option_creategroup(
                 ssh_host=ssh_host, gitolite_cmd=gitolite_cmd,
                 gitolite_home=gitolite_home,
-                gitolite_admin_repo=gitolite_admin_repo)
+                gitolite_admin_repo=gitolite_admin_repo,
+                creategroup_format=creategroup_format)
             # sys.exit(0)
         elif (os.environ['QUERY_STRING'].startswith('createrepo') and
               provided_options['createrepo']):
