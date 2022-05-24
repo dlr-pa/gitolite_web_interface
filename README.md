@@ -42,17 +42,37 @@ the global variable CONFIG:
   * ssh_gitolite_user
   * ssh_host
   * only_https
+  * gitolite_cmd
+  * gitolite_home
+  * gitolite_admin_repo
+  * creategroup_format
+  * provided_options with:
+    * help
+	* info
+	* mngkey
+	* creategroup
+	* createrepo
+
+Store the script in an adequate directory with necessary permissions, e. g.:
+
+    install --group=git --mode=0700 --owner=git --preserve-timestamps \ 
+      --target-directory=/var/www/bin/ gitolite_web_interface.py
+
+    install --group=git --mode=0700 --owner=git --preserve-timestamps \ 
+      --target-directory=/var/www/bin/gitolite_web_interface_mod/ \
+	  gitolite_web_interface_mod/*.py
 
 Now you can integrate calling it in [apache](https://apache.org/),
 e. g. add the following lines to your apache configuration:
 
-        ScriptAlias /www/ /var/www/bin/gitolite_web_interface.py
-        <Location /www>
-            AuthType Basic
-            AuthName "gitolite access is required"
-            Require valid-user
-            AuthUserFile /etc/apache2/gitolite.passwd
-        </Location>
+    SuexecUserGroup git git
+	ScriptAlias /www/ /var/www/bin/gitolite_web_interface.py
+    <Location /www>
+        AuthType Basic
+        AuthName "gitolite access is required"
+        Require valid-user
+        AuthUserFile /etc/apache2/gitolite.passwd
+    </Location>
 
 
 ## copyright + license
