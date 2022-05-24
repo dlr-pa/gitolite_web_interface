@@ -26,25 +26,8 @@ for managing user accounts with password, this script
 *gitolite_web_interface.py* provides the possibility to let the users
 manage their ssh keys in a gitolite environment.
 
-To use this script, you have to adapt the following few keys of the global
-variable CONFIG:
-
-  * gitolite_wrapper_script
-  * ssh_gitolite_user
-  * ssh_host
-  * only_https
-  * gitolite_cmd
-  * gitolite_home
-  * gitolite_admin_repo
-  * creategroup_format
-  * provided_options with:
-    * help
-	* info
-	* mngkey
-	* creategroup
-	* createrepo
-
-You can also overide the CONFIG variable.
+To use this script, you have to adapt a few keys of the global
+variable CONFIG.
 
 More information: https://github.com/dlr-pa/gitolite_web_interface
 """
