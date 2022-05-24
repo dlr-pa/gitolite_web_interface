@@ -8,10 +8,10 @@ import os
 import sys
 import tempfile
 
-from .output import output
-from .myform import generate_form_select_list, extract_set_from_form
 from .clone_push_repo import clone_admin_repo, commit_push_config_to_repo
 from .get_groups_from_gitolite import get_groups_from_gitolite
+from .myform import extract_set_from_form, generate_form_select_list
+from .output import output
 
 # pylint: disable=missing-docstring
 

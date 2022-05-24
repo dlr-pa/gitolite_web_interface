@@ -6,11 +6,11 @@
 import os
 import sys
 
-from .output import output
-from .option_help_info import option_help_info
-from .option_mngkey import option_mngkey
 from .option_creategroup import option_creategroup
 from .option_createrepo import option_createrepo
+from .option_help_info import option_help_info
+from .option_mngkey import option_mngkey
+from .output import output
 
 # pylint: disable=missing-docstring
 
