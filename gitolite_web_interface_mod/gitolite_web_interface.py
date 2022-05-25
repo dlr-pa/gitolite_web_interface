@@ -45,10 +45,10 @@ def gitolite_web_interface(
         as described in:
         https://gitolite.com/gitolite/contrib/ssh-and-http
     :param ssh_gitolite_user:
-        define the hosting user of your gitolite installation as described 
+        define the hosting user of your gitolite installation as described
         in: https://gitolite.com/gitolite/quick_install.html
     :param ssh_host:
-        define the ssh host as used in a possible ssh comand; 
+        define the ssh host as used in a possible ssh comand;
         if None, it will be set to HTTP_HOST
     :param only_https:
         define if only https traffic is accaptable (True or False)
@@ -61,7 +61,7 @@ def gitolite_web_interface(
     :param provided_options:
         define, which options should be provided.
         This should be dict or None. If None, the default dict is:
-        {'creategroup': True, 'createrepo': True, 'help': True, 
+        {'creategroup': True, 'createrepo': True, 'help': True,
          'info': True, 'mngkey': True}
     :param creategroup_format:
         define select format of users for creategroup

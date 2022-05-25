@@ -5,10 +5,8 @@
 :License: GNU GENERAL PUBLIC LICENSE, Version 2, June 1991.
 """
 
-import distutils  # we need distutils for distutils.errors.DistutilsArgError
 from distutils.core import Command, setup
-import os
-import sys
+
 
 class CheckModules(Command):
     """
@@ -51,6 +49,7 @@ class CheckModules(Command):
             "\nSummary\n%d modules are not available (not unique)\n%s\n" % (
                 i, summary))
 
+
 class CheckModulesModulefinder(Command):
     """
     :Author: Daniel Mohr
@@ -78,6 +77,7 @@ class CheckModulesModulefinder(Command):
             finder.run_script(script)
             finder.report()
 
+
 # necessary modules
 REQUIRED_MODULES = [
     'cgi',
@@ -85,7 +85,7 @@ REQUIRED_MODULES = [
     'subprocess',
     'sys',
     'tempfile',
-    ]
+]
 
 setup(
     name='gitolite_web_interface',
@@ -93,7 +93,7 @@ setup(
     cmdclass={
         'check_modules': CheckModules,
         'check_modules_modulefinder': CheckModulesModulefinder,
-        },
+    },
     description='gitolite_web_interface should give the possibility to add '
     'ssh keys over http on a gitolite installation.',
     long_description='',
@@ -104,7 +104,6 @@ setup(
     maintainer_email='daniel.mohr@dlr.de',
     url='https://github.com/dlr-pa/gitolite_web_interface',
     download_url='',
-    #package_dir={'': ''},
     packages=['gitolite_web_interface_mod'],
     license='GNU GENERAL PUBLIC LICENSE, Version 2, June 1991',
     classifiers=[
@@ -120,6 +119,6 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Site Management',
         'Topic :: Scientific/Engineering'
-        ],
+    ],
     requires=REQUIRED_MODULES
 )
