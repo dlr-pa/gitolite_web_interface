@@ -103,7 +103,7 @@ setup(
     maintainer='Daniel Mohr',
     maintainer_email='daniel.mohr@dlr.de',
     url='https://github.com/dlr-pa/gitolite_web_interface',
-    download_url='',
+    download_url='https://github.com/dlr-pa/gitolite_web_interface',
     packages=['gitolite_web_interface_mod'],
     license='GNU GENERAL PUBLIC LICENSE, Version 2, June 1991',
     classifiers=[
