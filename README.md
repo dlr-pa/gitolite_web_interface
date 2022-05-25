@@ -58,9 +58,15 @@ Store the script in an adequate directory with necessary permissions, e. g.:
     install --group=git --mode=0700 --owner=git --preserve-timestamps \
       --target-directory=/var/www/bin/ gitolite_web_interface.py
 
+You can install the module in the same way, e. g.:
+
     install --group=git --mode=0600 --owner=git --preserve-timestamps \
       --target-directory=/var/www/bin/gitolite_web_interface_mod/ \
 	  gitolite_web_interface_mod/*.py
+
+Or you can install the module using pip, e. g.:
+
+    pip3 install https://github.com/dlr-pa/gitolite_web_interface/archive/refs/heads/master.zip
 
 Now you can integrate calling it in [apache](https://apache.org/),
 e. g. add the following lines to your apache configuration:
