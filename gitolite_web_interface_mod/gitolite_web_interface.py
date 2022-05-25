@@ -1,6 +1,6 @@
 """
 :Author: Daniel Mohr
-:Date: 2022-05-24
+:Date: 2022-05-25
 """
 
 import os
@@ -15,7 +15,7 @@ from .output import output
 # pylint: disable=missing-docstring
 
 
-def cmdlink(name, additionalinfo=''):
+def _cmdlink(name, additionalinfo=''):
     ret = '<li><a href="' + os.environ.get('SCRIPT_NAME') + '?'
     ret += name + '">' + name + '</a>' + additionalinfo + '</li>'
     return ret
@@ -31,6 +31,43 @@ def gitolite_web_interface(
         gitolite_admin_repo='repositories/gitolite-admin.git',
         provided_options=None,
         creategroup_format='auto'):
+    """
+    Author: Daniel Mohr
+    Date: 2022-05-26
+
+    gitolite_web_interface_mod is part of
+    gitolite_web_interface https://github.com/dlr-pa/gitolite_web_interface
+
+    This function can be used in a cgi script.
+
+    :param gitolite_wrapper_script:
+        define the script, which is called when using gitolite over http
+        as described in:
+        https://gitolite.com/gitolite/contrib/ssh-and-http
+    :param ssh_gitolite_user:
+        define the hosting user of your gitolite installation as described
+        in: https://gitolite.com/gitolite/quick_install.html
+    :param ssh_host:
+        define the ssh host as used in a possible ssh comand;
+        if None, it will be set to HTTP_HOST
+    :param only_https:
+        define if only https traffic is accaptable (True or False)
+    :param gitolite_cmd:
+        define the gitolite command used on command line
+    :param gitolite_home:
+        define the gitolite home directory
+    :param gitolite_admin_repo:
+        define the gitolite admin repository path in the gitolite home
+    :param provided_options:
+        define, which options should be provided.
+        This should be dict or None. If None, the default dict is:
+        {'creategroup': True, 'createrepo': True, 'help': True,
+         'info': True, 'mngkey': True}
+    :param creategroup_format:
+        define select format of users for creategroup
+        you can choose between 'auto', 'checkbox' and 'select',
+        'auto' uses 'checkbox' for up to 5 users and 'select' otherwise
+    """
     # pylint: disable=too-many-arguments,too-many-locals
     # pylint: disable=too-many-branches,too-many-statements
     if provided_options is None:
@@ -115,7 +152,7 @@ def gitolite_web_interface(
     content += '<p><ul>'
     for cmd in provided_options.keys():
         if provided_options[cmd]:
-            content += cmdlink(cmd)
+            content += _cmdlink(cmd)
     output(
         title='start', content=content)
     sys.exit(0)
